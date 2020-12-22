@@ -5,14 +5,11 @@ from .const import DOMAIN, NAME, VERSION, ATTRIBUTION
 
 
 class IntegrationBlueprintEntity(CoordinatorEntity):
-    def __init__(self, coordinator, config_entry):
-        super().__init__(coordinator)
-        self.config_entry = config_entry
 
     @property
     def unique_id(self):
         """Return a unique ID to use for this entity."""
-        return self.config_entry.entry_id
+        return self.grill_id
 
     @property
     def device_info(self):
@@ -28,6 +25,5 @@ class IntegrationBlueprintEntity(CoordinatorEntity):
         """Return the state attributes."""
         return {
             "attribution": ATTRIBUTION,
-            "id": str(self.coordinator.data.get("id")),
             "integration": DOMAIN,
         }
