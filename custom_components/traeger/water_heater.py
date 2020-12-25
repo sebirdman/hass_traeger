@@ -21,7 +21,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     for grill in grills:
         async_add_devices([IntegrationBlueprintBinarySensor(client, grill["thingName"])])
 
-class IntegrationBlueprintBinarySensor(WaterHeaterEntity):
+class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEntity):
     """integration_blueprint binary_sensor class."""
 
     def grill_update(self):
@@ -35,7 +35,10 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity):
     @property
     def name(self):
         """Return the name of the binary_sensor."""
-        return f"{self.grill_id}"
+        state = self.client.get_details_for_device(self.grill_id)
+        if state is None:
+            return f"{self.grill_id}"
+        return state["friendlyName"]
 
     @property
     def unique_id(self):

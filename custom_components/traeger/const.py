@@ -12,7 +12,8 @@ ICON = "mdi:format-quote-close"
 
 # Platforms
 WATER_HEATER = "water_heater"
-PLATFORMS = [WATER_HEATER]
+SENSOR = "sensor"
+PLATFORMS = [WATER_HEATER, SENSOR]
 
 # Configuration and options
 CONF_ENABLED = "enabled"

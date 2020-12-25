@@ -43,8 +43,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
 
-    client = traeger(username, password)
-    client.start()
+    session = async_get_clientsession(hass)
+
+
+    client = traeger(username, password, session)
+    await client.start()
+    grills = client.get_grills()
+    for grill in grills:
+        grill_id = grill["thingName"]
+        await client.update_state(grill_id)
 
     hass.data[DOMAIN][entry.entry_id] = client
 
