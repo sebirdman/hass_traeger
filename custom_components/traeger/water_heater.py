@@ -69,7 +69,10 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
     @property
     def min_temp(self):
         # this was the min the traeger app would let me set
-        return 165
+        if self.client.get_units_for_device(self.grill_id) == TEMP_CELSIUS:
+            return 75
+        else:
+            return 165
 
     @property
     def max_temp(self):
@@ -85,7 +88,10 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
 
     @property
     def temperature_unit(self):
-        return TEMP_FAHRENHEIT
+        if self.client.get_units_for_device(self.grill_id) == TEMP_CELSIUS:
+            return TEMP_CELSIUS
+        else:
+            return TEMP_FAHRENHEIT
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""

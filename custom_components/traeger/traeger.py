@@ -21,6 +21,7 @@ import socket
 import logging
 import async_timeout
 import aiohttp
+import homeassistant.const
 
 
 CLIENT_ID = "2fuohjtqv1e63dckp5v84rau0j"
@@ -157,6 +158,7 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
+        _LOGGER.info("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
@@ -194,6 +196,15 @@ class traeger:
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["settings"]
+
+    def get_units_for_device(self, thingName):
+        state = self.get_state_for_device(thingName)
+        if state is None:
+            return homeassistant.const.TEMP_FAHRENHEIT
+        if state["units"] == 0:
+            return homeassistant.const.TEMP_CELSIUS
+        else:
+            return homeassistant.const.TEMP_FAHRENHEIT
 
     def get_details_for_accessory(self, thingName, accessory_id):
         state = self.get_state_for_device(thingName)
