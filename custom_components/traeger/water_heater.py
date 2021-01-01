@@ -3,12 +3,12 @@ from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE,
     WaterHeaterEntity,
+    STATE_PERFORMANCE
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     TEMP_CELSIUS,
     TEMP_FAHRENHEIT,
-    STATE_PERFORMANCE,
     STATE_OFF
 )
 
@@ -49,6 +49,10 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
     @property
     def unique_id(self):
         return self.grill_id
+
+    @property
+    def icon(self):
+        return "mdi:grill"
 
     @property
     def current_temperature(self):
