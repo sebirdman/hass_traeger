@@ -61,7 +61,7 @@ class ValueTemperature(IntegrationBlueprintEntity):
 
     @property
     def unit_of_measurement(self):
-        return "ºF"
+        return self.client.get_units_for_device(self.grill_id)
 
 
 class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
@@ -99,4 +99,4 @@ class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
 
     @property
     def unit_of_measurement(self):
-        return "ºF"
+        return self.client.get_units_for_device(self.grill_id)
