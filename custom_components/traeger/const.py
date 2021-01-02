@@ -1,11 +1,11 @@
-"""Constants for integration_blueprint."""
+"""Constants for traeger."""
 # Base component constants
 NAME = "Traeger"
 DOMAIN = "traeger"
 DOMAIN_DATA = f"{DOMAIN}_data"
 VERSION = "0.0.1"
 ATTRIBUTION = ""
-ISSUE_URL = ""
+ISSUE_URL = "https://github.com/sebirdman/hass_traeger/issues"
 
 # Icons
 ICON = "mdi:format-quote-close"

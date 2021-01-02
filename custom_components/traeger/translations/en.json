@@ -1,10 +1,10 @@
 {
     "config": {
-        "title": "Blueprint",
+        "title": "Traeger",
         "step": {
             "user": {
-                "title": "Blueprint",
-                "description": "If you need help with the configuration have a look here: https://github.com/custom-components/integration_blueprint",
+                "title": "Traeger",
+                "description": "If you need help with the configuration have a look here: https://github.com/sebirdman/hass_traeger/issues",
                 "data": {
                     "username": "Username",
                     "password": "Password"
@@ -15,7 +15,7 @@
             "auth": "Username/Password is wrong."
         },
         "abort": {
-            "single_instance_allowed": "Only a single configuration of Blueprint is allowed."
+            "single_instance_allowed": "Only a single configuration of Traeger is allowed."
         }
     },
     "options": {
