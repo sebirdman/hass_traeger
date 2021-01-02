@@ -67,12 +67,19 @@ class traeger:
 
     async def refresh_token(self):
         if self.token_remaining() < 60:
-            request_time = time.time()
+            try:
+                request_time = time.time()
 
-            response = await self.do_cognito()
+                response = await self.do_cognito()
 
-            self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
-            self.token = response["AuthenticationResult"]["IdToken"]
+                self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
+                self.token = response["AuthenticationResult"]["IdToken"]
+            except KeyError as exception:
+                _LOGGER.error(
+                    "Failed to login %s - %s",
+                    response,
+                    exception,
+                )
 
     async def get_user_data(self):
         await self.refresh_token()
