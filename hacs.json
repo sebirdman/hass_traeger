@@ -6,5 +6,6 @@
         "sensor"
     ],
     "iot_class": "Cloud Push",
+    "render_readme": true,
     "homeassistant": "0.118.0"
 }
