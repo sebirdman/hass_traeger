@@ -13,7 +13,9 @@ Platform | Description
 `sensor` | Shows various temperature readings from the grill or accessories
 `water_heater` | Allows temperature control of the grill
 
-![example][exampleimg]
+![device][deviceimg]
+![grill][grillimg]
+![probe][probeimg]
 
 ## Installation (Manual)
 
@@ -44,7 +46,9 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [traeger]: https://www.traegergrills.com/
 [hacs]: https://github.com/custom-components/hacs
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
-[exampleimg]: example.png
+[deviceimg]: device.png
+[probeimg]: probe.png
+[grillimg]: grill.png
 [license-shield]: https://img.shields.io/github/license/custom-components/blueprint.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/custom-components/blueprint.svg?style=for-the-badge
 [releases]: https://github.com/sebirdman/hass_traeger/releases
