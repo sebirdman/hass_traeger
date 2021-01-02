@@ -3,8 +3,14 @@ from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE,
     WaterHeaterEntity,
+    STATE_PERFORMANCE
 )
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+    STATE_OFF
+)
 
 from .const import (
     DEFAULT_NAME,
@@ -45,6 +51,10 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
         return self.grill_id
 
     @property
+    def icon(self):
+        return "mdi:grill"
+
+    @property
     def current_temperature(self):
         state = self.client.get_state_for_device(self.grill_id)
         if state is None:
@@ -80,6 +90,17 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
         if limits is None:
             return self.min_temp
         return limits["max_grill_temp"]
+
+    @property
+    def state(self):
+        state = self.client.get_state_for_device(self.grill_id)
+        if state is None:
+            return STATE_OFF
+        if state["connected"] == True:
+            # water_heater entity does not support STATE_ON
+            return STATE_PERFORMANCE
+        else:
+            return STATE_OFF
 
     @property
     def supported_features(self):
