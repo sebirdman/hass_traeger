@@ -4,7 +4,6 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import voluptuous as vol
 
-from .api import IntegrationBlueprintApiClient
 from .const import (
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -64,9 +63,7 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_credentials(self, username, password):
         """Return true if credentials is valid."""
         try:
-            session = async_create_clientsession(self.hass)
-            client = IntegrationBlueprintApiClient(username, password, session)
-            await client.async_get_data()
+            # TODO: validate that credentials are correct
             return True
         except Exception:  # pylint: disable=broad-except
             pass

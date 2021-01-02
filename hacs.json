@@ -1,11 +1,11 @@
 {
-    "name": "Integration blueprint",
+    "name": "Traeger",
     "hacs": "1.6.0",
     "domains": [
-        "binary_sensor",
-        "sensor",
-        "switch"
+        "water_heater",
+        "sensor"
     ],
-    "iot_class": "Cloud Polling",
+    "iot_class": "Cloud Push",
+    "render_readme": true,
     "homeassistant": "0.118.0"
 }
