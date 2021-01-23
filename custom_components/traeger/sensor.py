@@ -23,13 +23,14 @@ async def async_setup_entry(hass, entry, async_add_devices):
         for accessory in state["acc"]:
             if accessory["type"] == "probe":
                 async_add_devices([AccessoryTemperatureSensor(
-                    client, grill_id, accessory["uuid"])])
+                    hass, client, grill_id, accessory["uuid"])])
 
         async_add_devices(
-            [ValueTemperature(client, grill["thingName"], "grill")])
+            [ValueTemperature(hass, client, grill["thingName"], "grill")])
         async_add_devices(
-            [ValueTemperature(client, grill["thingName"], "ambient")])
-
+            [ValueTemperature(hass, client, grill["thingName"], "ambient")])
+        async_add_devices(
+            [ValueTemperature(hass, client, grill["thingName"], "system_status")])
 
 class ValueTemperature(IntegrationBlueprintEntity):
     """Traeger Temperature Value class."""
@@ -37,7 +38,8 @@ class ValueTemperature(IntegrationBlueprintEntity):
     def grill_update(self):
         self.schedule_update_ha_state()
 
-    def __init__(self, client, grill_id, value):
+    def __init__(self, hass, client, grill_id, value):
+        self.hass = hass
         self.grill_id = grill_id
         self.client = client
         self.value = value
@@ -70,7 +72,8 @@ class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
     def grill_update(self):
         self.schedule_update_ha_state()
 
-    def __init__(self, client, grill_id, sensor_id):
+    def __init__(self, hass, client, grill_id, sensor_id):
+        self.hass = hass
         self.grill_id = grill_id
         self.client = client
         self.sensor_id = sensor_id

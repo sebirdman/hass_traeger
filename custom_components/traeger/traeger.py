@@ -99,11 +99,20 @@ class traeger:
             "User-Agent": "Traeger/11 CFNetwork/1209 Darwin/20.2.0",
         })
 
-    async def update_state(self, thingName):
+    async def update_state(self, thingName, timeout = 10):
         self.grill_status = {}
+        # this is actually what the traeger app does, it sends this thing three times
         await self.send_command(thingName, "90")
-        while not bool(self.grill_status):
+        await self.send_command(thingName, "90")
+        await self.send_command(thingName, "90")
+        remaining = timeout
+        while not bool(self.grill_status) and remaining > 0:
             await asyncio.sleep(1)
+            remaining -= 1
+        if remaining <= 0:
+            _LOGGER.error(
+                "Failed to get state"
+            )
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
@@ -140,16 +149,16 @@ class traeger:
             self.mqtt_url = json["signedUrl"]
 
     def _mqtt_connect_func(self):
-        while True:
-            self.mqtt_client.loop_forever()
+        self.mqtt_client.loop_forever()
 
-    async def get_mqtt_client(self, on_connect, on_message):
+    async def get_mqtt_client(self, on_connect, on_disconnect, on_message):
         if self.mqtt_client == None:
             await self.refresh_mqtt_url()
             mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
             self.mqtt_client = mqtt.Client(transport="websockets")
             self.mqtt_client.on_connect = on_connect
             self.mqtt_client.on_message = on_message
+            self.mqtt_client.on_disconnect = on_disconnect
             headers = {
                 "Host": "{0:s}".format(mqtt_parts.netloc),
             }
@@ -173,11 +182,20 @@ class traeger:
                 for callback in self.grill_callbacks[grill_id]:
                     callback()
 
+    def grill_disconnect(self, client, userdata, rc):
+        _LOGGER.error(
+            rc
+        )
+        self.subscribe_to_grill_status()
+
     def grill_connect(self, client, userdata, flags, rc):
+        _LOGGER.error(
+            "Connected"
+        )
         pass
 
     async def subscribe_to_grill_status(self):
-        client = await self.get_mqtt_client(self.grill_connect, self.grill_message)
+        client = await self.get_mqtt_client(self.grill_connect, self.grill_disconnect, self.grill_message)
         for grill in self.grills:
             if grill["thingName"] in self.grill_status:
                 del self.grill_status[grill["thingName"]]

@@ -25,7 +25,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     client = hass.data[DOMAIN][entry.entry_id]
     grills = client.get_grills()
     for grill in grills:
-        async_add_devices([IntegrationBlueprintBinarySensor(client, grill["thingName"])])
+        async_add_devices([IntegrationBlueprintBinarySensor(hass, client, grill["thingName"])])
 
 class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEntity):
     """integration_blueprint binary_sensor class."""
@@ -33,7 +33,8 @@ class IntegrationBlueprintBinarySensor(WaterHeaterEntity, IntegrationBlueprintEn
     def grill_update(self):
         self.schedule_update_ha_state()
 
-    def __init__(self, client, grill_id):
+    def __init__(self, hass, client, grill_id):
+        self.hass = hass
         self.grill_id = grill_id
         self.client = client
         self.client.set_callback_for_grill(self.grill_id, self.grill_update)
