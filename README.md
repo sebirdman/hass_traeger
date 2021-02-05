@@ -11,7 +11,7 @@ _Component to integrate with [Traeger WiFire Grills][traeger]._
 Platform | Description
 -- | --
 `sensor` | Shows various temperature readings from the grill or accessories
-`water_heater` | Allows temperature control of the grill
+`climate` | Allows temperature control of the grill
 
 ![device][deviceimg]
 ![grill][grillimg]
