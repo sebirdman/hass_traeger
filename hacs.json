@@ -7,5 +7,12 @@
     ],
     "iot_class": "Cloud Push",
     "render_readme": true,
-    "homeassistant": "0.118.0"
+    "homeassistant": "0.118.0",
+    "version": "2021.02.0",
+    "codeowners": [
+        "@sebirdman",
+        "@Velines",
+        "@krbaker",
+        "@stephenpapierski"
+    ]
 }
