@@ -149,3 +149,57 @@ class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
     @property
     def unit_of_measurement(self):
         return self.grill_units
+
+
+class PelletSensor(IntegrationBlueprintEntity):
+    """Traeger Pellet Sensor class."""
+
+    def __init__(self, client, grill_id, value):
+        self.grill_id = grill_id
+        self.client = client
+        self.value = value
+        self.grill_state = None
+        self.grill_units = None
+
+        # Tell the Traeger client to call grill_update() when it gets an update
+        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
+
+    def grill_update(self):
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_units = self.client.get_units_for_device(self.grill_id)
+
+        # Tell HA we have an update
+        self.schedule_update_ha_state()
+
+    # Generic Properties
+    # @property
+    # def available(self):
+    #    """Reports unavailable when the grill is powered off"""
+    #    if self.grill_state is None:
+    #        return False
+    #    else:
+    #        return True if self.grill_state["connected"] == True else False
+
+    @property
+    def name(self):
+        """Return the name of the sensor."""
+        return f"{self.value.replace('_',' ').title()}"
+
+    @property
+    def unique_id(self):
+        return f"{self.grill_id}-{self.value}"
+
+    @property
+    def icon(self):
+        return "mdi:gauge"
+
+    # Sensor Properties
+    @property
+    def state(self):
+        if self.grill_state is None:
+            return 0
+        return self.grill_state[self.value]
+
+    @property
+    def unit_of_measurement(self):
+        return "%"
