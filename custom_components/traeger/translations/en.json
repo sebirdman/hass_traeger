@@ -22,9 +22,8 @@
         "step": {
             "user": {
                 "data": {
-                    "binary_sensor": "Binary sensor enabled",
-                    "sensor": "Sensor enabled",
-                    "switch": "Switch enabled"
+                    "sensor": "Sensors enabled",
+                    "climate": "Climate entity enabled"
                 }
             }
         }
