@@ -68,6 +68,14 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
 
     # Generic Properties
     @property
+    def available(self):
+        """Reports unavailable when the grill is powered off"""
+        if self.grill_state is None:
+            return False
+        else:
+            return True if self.grill_state["connected"] == True else False
+
+    @property
     def name(self):
         """Return the name of the grill"""
         if self.grill_details is None:
