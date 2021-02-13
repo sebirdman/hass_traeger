@@ -11,9 +11,9 @@ ISSUE_URL = "https://github.com/sebirdman/hass_traeger/issues"
 ICON = "mdi:format-quote-close"
 
 # Platforms
-WATER_HEATER = "water_heater"
+CLIMATE = "climate"
 SENSOR = "sensor"
-PLATFORMS = [WATER_HEATER, SENSOR]
+PLATFORMS = [CLIMATE, SENSOR]
 
 # Configuration and options
 CONF_ENABLED = "enabled"

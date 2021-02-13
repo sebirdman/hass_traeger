@@ -6,7 +6,11 @@
   "dependencies": [],
   "config_flow": true,
   "codeowners": [
-    "@sebirdman"
-  ],
-  "requirements": []
+    "@sebirdman",
+    "@Velines",
+    "@krbaker",
+    "@stephenpapierski"
+    ],
+  "requirements": [],
+  "version": "2021.02.0"
 }

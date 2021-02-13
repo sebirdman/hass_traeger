@@ -2,7 +2,7 @@
     "name": "Traeger",
     "hacs": "1.6.0",
     "domains": [
-        "water_heater",
+        "climate",
         "sensor"
     ],
     "iot_class": "Cloud Push",
