@@ -170,3 +170,8 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         self.client.set_temperature(self.grill_id, temperature)
+
+    def set_hvac_mode(self, hvac_mode):
+        """Start grill shutdown sequence"""
+        if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
+            self.client.shutdown_grill(self.grill_id)
