@@ -105,6 +105,13 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         return self.grill_state["grill"]
 
     @property
+    def target_temperature_step(self):
+        if self.grill_units == TEMP_CELSIUS:
+            return 1
+        else:
+            return 5
+
+    @property
     def target_temperature(self):
         if self.grill_state is None:
             return 0
@@ -169,7 +176,7 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
-        self.client.set_temperature(self.grill_id, temperature)
+        await self.client.set_temperature(self.grill_id, round(temperature))
 
     def set_hvac_mode(self, hvac_mode):
         """Start grill shutdown sequence"""
