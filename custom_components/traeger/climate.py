@@ -178,7 +178,7 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         temperature = kwargs.get(ATTR_TEMPERATURE)
         await self.client.set_temperature(self.grill_id, round(temperature))
 
-    def set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Start grill shutdown sequence"""
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
-            self.client.shutdown_grill(self.grill_id)
+            await self.client.shutdown_grill(self.grill_id)
