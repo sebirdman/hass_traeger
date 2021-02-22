@@ -130,7 +130,7 @@ class traeger:
         return self.mqtt_url_expires - time.time()
 
     async def refresh_mqtt_url(self):
-        self.refresh_token()
+        await self.refresh_token()
         if self.mqtt_url_remaining() < 60:
             mqtt_request_time = time.time()
             json = await self.api_wrapper("post", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/mqtt-connections",
