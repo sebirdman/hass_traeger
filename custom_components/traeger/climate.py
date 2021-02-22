@@ -106,10 +106,7 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
 
     @property
     def target_temperature_step(self):
-        if self.grill_units == TEMP_CELSIUS:
-            return 1
-        else:
-            return 5
+        return 5
 
     @property
     def target_temperature(self):
