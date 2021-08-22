@@ -25,7 +25,10 @@ async def async_setup_entry(hass, entry, async_add_devices):
         for accessory in state["acc"]:
             if accessory["type"] == "probe":
                 async_add_devices(
-                    [AccessoryTemperatureSensor(client, grill_id, accessory["uuid"])]
+                    [AccessoryTemperatureSensor(client, grill_id, accessory["uuid"], "get_temp")]
+                )
+                async_add_devices(
+                    [AccessoryTemperatureSensor(client, grill_id, accessory["uuid"], "set_temp")]
                 )
 
         async_add_devices([ValueTemperature(client, grill["thingName"], "grill")])
@@ -90,10 +93,11 @@ class ValueTemperature(IntegrationBlueprintEntity):
 class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
     """Traeger Temperature Accessory class."""
 
-    def __init__(self, client, grill_id, sensor_id):
+    def __init__(self, client, grill_id, sensor_id, value):
         self.grill_id = grill_id
         self.client = client
         self.sensor_id = sensor_id
+        self.value = value
         self.grill_state = None
         self.grill_units = None
         self.grill_details = None
@@ -126,14 +130,14 @@ class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
     def name(self):
         """Return the name of the sensor."""
         if self.grill_details is None:
-            return f"{self.grill_id}-{self.sensor_id}"
+            return f"{self.grill_id}-{self.sensor_id}-{self.value}"
 
         name = self.grill_details["friendlyName"]
-        return f"{name}-{self.sensor_id}"
+        return f"{name}-{self.sensor_id}-{self.value}"
 
     @property
     def unique_id(self):
-        return f"{self.grill_id}-{self.sensor_id}"
+        return f"{self.grill_id}-{self.sensor_id}-{self.value}"
 
     @property
     def icon(self):
@@ -144,7 +148,7 @@ class AccessoryTemperatureSensor(IntegrationBlueprintEntity):
     def state(self):
         if self.grill_accessory is None:
             return 0
-        return self.grill_accessory["probe"]["get_temp"]
+        return self.grill_accessory["probe"][self.value]
 
     @property
     def unit_of_measurement(self):
