@@ -87,4 +87,3 @@ class TraegerNumberEntity(NumberEntity, IntegrationBlueprintEntity):
     async def async_set_value(self, value : float):
         """Set new Timer Val."""
         await self.client.set_timer_sec(self.grill_id, (round(value)*60))
-© 2021 GitHub, Inc.
