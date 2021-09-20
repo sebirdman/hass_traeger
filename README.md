@@ -15,7 +15,7 @@ Platform | Description
 `number` | Allows minutes input to the timer
 `switch` | Allow SuperSmoke, Keepwarm, and connectivity switch
 
-![device][deviceV1img]
+![device][deviceimg]
 ![grill][grillimg]
 ![probe][probeimg]
 
