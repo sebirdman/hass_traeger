@@ -81,6 +81,7 @@ class traeger:
         await self.refresh_token()
         return await self.api_wrapper("get", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/users/self",
                                    headers={'authorization': self.token})
+        _LOGGER.debug("Async Get_User_Data") 
 
     async def send_command(self, thingName, command):
         _LOGGER.debug("Send Command Topic: %s, Send Command: %s", thingName, command)
@@ -101,6 +102,12 @@ class traeger:
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
+        
+    async def set_probe_temperature(self, thingName, temp):
+        await self.send_command(thingName, "14,{}".format(temp))  
+        
+    async def set_switch(self, thingName, switchval):
+        await self.send_command(thingName, str(switchval))        
 
     async def set_probe_temperature(self, thingName, temp):
         await self.send_command(thingName, "14,{}".format(temp))
@@ -235,6 +242,16 @@ class traeger:
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["settings"]
+    
+    def get_features_for_device(self, thingName):
+        if thingName not in self.grill_status:
+            return None
+        return self.grill_status[thingName]["features"]
+    
+    def get_cloudconnect(self, thingName):
+        if thingName not in self.grill_status:
+            return False
+        return self.mqtt_thread_running
 
     def get_features_for_device(self, thingName):
         if thingName not in self.grill_status:
