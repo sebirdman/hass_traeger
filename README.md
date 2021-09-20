@@ -16,6 +16,7 @@ Platform | Description
 `switch` | Allow SuperSmoke, Keepwarm, and connectivity switch
 
 ![device][deviceimg]
+![lovelace][lovelaceimg]
 ![grill][grillimg]
 ![probe][probeimg]
 
