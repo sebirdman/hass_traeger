@@ -23,7 +23,9 @@
             "user": {
                 "data": {
                     "sensor": "Sensors enabled",
-                    "climate": "Climate entity enabled"
+                    "climate": "Climate entity enabled",
+                    "switch": "Switch entity enabled",
+                    "number": "Number entity enabled"
                 }
             }
         }
