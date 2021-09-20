@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     session = async_get_clientsession(hass)
 
 
-    client = traeger(username, password, session)
+    client = traeger(username, password, hass, session)
     await client.start()
     grills = client.get_grills()
     for grill in grills:
