@@ -3,7 +3,7 @@
 NAME = "Traeger"
 DOMAIN = "traeger"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "0.0.2"
+VERSION = "0.1.0"
 ATTRIBUTION = ""
 ISSUE_URL = "https://github.com/sebirdman/hass_traeger/issues"
 
@@ -13,7 +13,9 @@ ICON = "mdi:format-quote-close"
 # Platforms
 CLIMATE = "climate"
 SENSOR = "sensor"
-PLATFORMS = [CLIMATE, SENSOR]
+SWITCH = "switch"
+NUMBER = "number"
+PLATFORMS = [CLIMATE, SENSOR, SWITCH, NUMBER]
 
 # Configuration and options
 CONF_ENABLED = "enabled"
