@@ -31,10 +31,15 @@ TIMEOUT = 10
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 class traeger:
-    def __init__(self, username, password, request_library):
+    def __init__(self, username, password, hass, request_library):
         self.username = username
         self.password = password
         self.mqtt_uuid = str(uuid.uuid1())
+        self.hass = hass
+        self.loop = hass.loop
+        self.mqtt_thread_running = False
+        self.mqtt_thread_refreshing = False
+        self.task = None
         self.mqtt_url = None
         self.mqtt_client = None
         self.grill_status = {}
@@ -85,8 +90,10 @@ class traeger:
         await self.refresh_token()
         return await self.api_wrapper("get", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/users/self",
                                    headers={'authorization': self.token})
+        _LOGGER.debug("Async Get_User_Data") 
 
     async def send_command(self, thingName, command):
+        _LOGGER.debug("Send Command Topic: %s, Send Command: %s", thingName, command)
         await self.refresh_token()
         await self.api_wrapper("post_raw", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/things/{}/commands".format(thingName),
                                data={
@@ -107,6 +114,12 @@ class traeger:
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
+        
+    async def set_probe_temperature(self, thingName, temp):
+        await self.send_command(thingName, "14,{}".format(temp))  
+        
+    async def set_switch(self, thingName, switchval):
+        await self.send_command(thingName, str(switchval))        
 
     async def shutdown_grill(self, thingName):
         await self.send_command(thingName, "17")
@@ -132,24 +145,44 @@ class traeger:
     async def refresh_mqtt_url(self):
         await self.refresh_token()
         if self.mqtt_url_remaining() < 60:
-            mqtt_request_time = time.time()
-            json = await self.api_wrapper("post", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/mqtt-connections",
-                                       headers={'Authorization': self.token})
-            self.mqtt_url_expires = json["expirationSeconds"] + \
-                mqtt_request_time
-            self.mqtt_url = json["signedUrl"]
+            try:
+                mqtt_request_time = time.time()
+                json = await self.api_wrapper("post", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/mqtt-connections",
+                                           headers={'Authorization': self.token})
+                self.mqtt_url_expires = json["expirationSeconds"] + \
+                    mqtt_request_time
+                self.mqtt_url = json["signedUrl"]
+            except KeyError as exception:
+                _LOGGER.error(
+                    "Key Error Failed to Parse MQTT URL %s - %s",
+                    json,
+                    exception,
+                )
+            except Exception as exception:
+                _LOGGER.error(
+                    "Other Error Failed to Parse MQTT URL %s - %s",
+                    json,
+                    exception,
+                )
+        _LOGGER.debug(f"MQTT URL:{self.mqtt_url} Expires @:{self.mqtt_url_expires}")
 
     def _mqtt_connect_func(self):
-        while True:
-            self.mqtt_client.loop_forever()
+        if self.mqtt_client != None:
+            _LOGGER.debug(f"Start MQTT Loop Forever")
+            while self.mqtt_thread_running:
+                self.mqtt_client.loop_forever()
+                while (self.mqtt_url_remaining() < 60 or self.mqtt_thread_refreshing) and self.mqtt_thread_running:
+                    time.sleep(1)
+        _LOGGER.debug(f"Should be the end of the thread.")
 
-    async def get_mqtt_client(self, on_connect, on_message):
+    async def get_mqtt_client(self, on_connect, on_message, on_log):
         if self.mqtt_client == None:
             await self.refresh_mqtt_url()
             mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
             self.mqtt_client = mqtt.Client(transport="websockets")
             self.mqtt_client.on_connect = on_connect
             self.mqtt_client.on_message = on_message
+            self.mqtt_client.on_log = on_log   #Only need this for troubleshooting
             headers = {
                 "Host": "{0:s}".format(mqtt_parts.netloc),
             }
@@ -160,12 +193,16 @@ class traeger:
             context.verify_mode = ssl.CERT_NONE
             self.mqtt_client.tls_set_context(context)
             self.mqtt_client.connect(mqtt_parts.netloc, 443)
-            x = threading.Thread(target=self._mqtt_connect_func)
-            x.start()
+            _LOGGER.debug(f"Thread Active Count:{threading.active_count()}")
+            if self.mqtt_thread_running == False:
+                self.mqtt_thread = threading.Thread(target=self._mqtt_connect_func)
+                self.mqtt_thread_running = True
+                self.mqtt_thread.start()
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
         _LOGGER.info("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
+        _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
@@ -175,9 +212,12 @@ class traeger:
 
     def grill_connect(self, client, userdata, flags, rc):
         pass
+    
+    def mqtt_log(self, client, userdata, level, buf):
+        _LOGGER.debug("MQTT Log Level: %s, MQTT Log BUF: %s", level, buf)
 
     async def subscribe_to_grill_status(self):
-        client = await self.get_mqtt_client(self.grill_connect, self.grill_message)
+        client = await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log)
         for grill in self.grills:
             if grill["thingName"] in self.grill_status:
                 del self.grill_status[grill["thingName"]]
@@ -203,6 +243,16 @@ class traeger:
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["settings"]
+    
+    def get_features_for_device(self, thingName):
+        if thingName not in self.grill_status:
+            return None
+        return self.grill_status[thingName]["features"]
+    
+    def get_cloudconnect(self, thingName):
+        if thingName not in self.grill_status:
+            return False
+        return self.mqtt_thread_running
 
     def get_units_for_device(self, thingName):
         state = self.get_state_for_device(thingName)
@@ -223,6 +273,48 @@ class traeger:
     async def start(self):
         await self.update_grills()
         await self.subscribe_to_grill_status()
+        delay = 30
+        _LOGGER.info(f"Call_Later in: {delay} seconds")
+        self.task = self.loop.call_later(delay, self.syncmain)
+        
+    def syncmain(self):
+        _LOGGER.debug(f"@Call_Later SyncMain CreatingTask for async Main.")
+        self.hass.async_create_task(self.main()) 
+    
+    async def main(self):
+        _LOGGER.info(f"Current Main Loop Time: {time.time()}")
+        _LOGGER.info(f"MQTT Logger Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
+        if self.mqtt_url_remaining() < 60 and self.mqtt_thread_running:
+            self.mqtt_thread_refreshing = True
+            self.mqtt_client.disconnect()
+            self.mqtt_client = None
+            await self.subscribe_to_grill_status()
+            self.mqtt_thread_refreshing = False     
+        _LOGGER.info(f"Call_Later @: {self.mqtt_url_expires}")
+        delay = self.mqtt_url_remaining()
+        if delay < 30:
+            delay = 30       
+        self.task = self.loop.call_later(delay, self.syncmain)
+    
+    async def kill(self):
+        if self.mqtt_thread_running:
+            _LOGGER.info(f"Killing Task")
+            _LOGGER.debug(f"Task Info: {self.task}")
+            self.task.cancel()
+            _LOGGER.debug(f"TaskCancelled Status: {self.task.cancelled()}")
+            _LOGGER.debug(f"Task Info: {self.task}")
+            self.task = None
+            _LOGGER.debug(f"Task Info: {self.task}")
+            self.mqtt_thread_running = False
+            self.mqtt_client.disconnect()
+            self.mqtt_client = None
+            self.mqtt_url_expires = time.time()
+            for grill in self.grills:
+                grill_id = grill["thingName"]
+                for callback in self.grill_callbacks[grill_id]:
+                    callback()
+        else:
+            _LOGGER.info(f"Task Already Dead")
 
     async def api_wrapper(
         self, method: str, url: str, data: dict = {}, headers: dict = {}
