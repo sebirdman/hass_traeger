@@ -48,7 +48,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
             if accessory["type"] == "probe":
                 async_add_devices(
                     [AccessoryTraegerClimateEntity(client, grill_id, accessory["uuid"])]
-
+                )
 
 class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
     """Climate entity for Traeger grills"""
