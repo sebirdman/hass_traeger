@@ -39,7 +39,15 @@ async def async_setup_entry(hass, entry, async_add_devices):
     client = hass.data[DOMAIN][entry.entry_id]
     grills = client.get_grills()
     for grill in grills:
-        async_add_devices([TraegerClimateEntity(client, grill["thingName"])])
+        grill_id = grill["thingName"]
+        state = client.get_state_for_device(grill_id)
+        async_add_devices([TraegerClimateEntity(client, grill_id)])
+        if state is None:
+            return
+        for accessory in state["acc"]:
+            if accessory["type"] == "probe":
+                async_add_devices(
+                    [AccessoryTraegerClimateEntity(client, grill_id, accessory["uuid"])]
 
 
 class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
@@ -79,12 +87,13 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
     def name(self):
         """Return the name of the grill"""
         if self.grill_details is None:
-            return f"{self.grill_id}"
-        return self.grill_details["friendlyName"]
+            return f"{self.grill_id}_probe_{self.sensor_id}"
+        name = self.grill_details["friendlyName"]
+        return f"{name} Probe {self.sensor_id}"
 
     @property
     def unique_id(self):
-        return self.grill_id
+        return f"{self.grill_id}_probe_{self.sensor_id}"
 
     @property
     def icon(self):
@@ -179,3 +188,134 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         """Start grill shutdown sequence"""
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             await self.client.shutdown_grill(self.grill_id)
+
+class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
+    """Climate entity for Traeger grills"""
+
+    def __init__(self, client, grill_id, sensor_id):
+        self.grill_id = grill_id
+        self.client = client
+        self.sensor_id = sensor_id
+        self.grill_details = None
+        self.grill_state = None
+        self.grill_units = None
+
+        # Tell the Traeger client to call grill_update() when it gets an update
+        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
+
+    def grill_update(self):
+        """This gets called when the grill has an update. Update state variable"""
+        self.grill_details = self.client.get_details_for_device(self.grill_id)
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_units = self.client.get_units_for_device(self.grill_id)
+        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
+        self.grill_accessory = self.client.get_details_for_accessory(
+            self.grill_id, self.sensor_id
+        )
+
+        # Tell HA we have an update
+        self.schedule_update_ha_state()
+
+    # Generic Properties
+    @property
+    def available(self):
+        """Reports unavailable when the grill is powered off"""
+        if self.grill_state is None:
+            return False
+        else:
+            return True if self.grill_state["connected"] == True else False
+
+    @property
+    def name(self):
+        """Return the name of the grill"""
+        if self.grill_details is None:
+            return f"{self.grill_id}_probe_{self.sensor_id}"
+        name = self.grill_details["friendlyName"]
+        return f"{name} Probe {self.sensor_id}"
+
+    @property
+    def unique_id(self):
+        return f"{self.grill_id}_probe_{self.sensor_id}"
+
+    @property
+    def icon(self):
+        return "mdi:thermometer"
+
+    # Climate Properties
+    @property
+    def temperature_unit(self):
+        if self.grill_units == TEMP_CELSIUS:
+            return TEMP_CELSIUS
+        else:
+            return TEMP_FAHRENHEIT
+
+    @property
+    def current_temperature(self):
+        if self.grill_state is None:
+            return 0
+        return self.grill_accessory["probe"]["get_temp"]
+
+    @property
+    def target_temperature(self):
+        if self.grill_state is None:
+            return 0
+        return self.grill_accessory["probe"]["set_temp"]
+
+    @property
+    def target_temperature_step(self):
+        return 5
+
+    @property
+    def max_temp(self):
+        # this was the max the traeger would let me set
+        if self.grill_units == TEMP_CELSIUS:
+            return 100
+        else:
+            return 215
+
+    @property
+    def min_temp(self):
+        # this was the min the traeger would let me set
+        if self.grill_units == TEMP_CELSIUS:
+            return 45
+        else:
+            return 115
+
+    @property
+    def hvac_mode(self):
+        """Return hvac operation ie. heat, cool mode.
+        Need to be one of HVAC_MODE_*.
+        """
+        if self.grill_state is None:
+            return HVAC_MODE_OFF
+
+        state = self.grill_state["probe_con"]
+
+        if state == 1:  # Probe Connected
+            return HVAC_MODE_HEAT
+        else:
+            return HVAC_MODE_OFF
+
+    @property
+    def hvac_modes(self):
+        """Return the list of available hvac operation modes.
+        Need to be a subset of HVAC_MODES.
+        """
+        return (HVAC_MODE_HEAT, HVAC_MODE_OFF)
+
+    @property
+    def supported_features(self):
+        """Return the list of supported features for the grill"""
+        return SUPPORT_TARGET_TEMPERATURE
+
+    # Climate Methods
+    async def async_set_temperature(self, **kwargs):
+        """Set new target temperature."""
+        temperature = kwargs.get(ATTR_TEMPERATURE)
+        await self.client.set_probe_temperature(self.grill_id, round(temperature))
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Start grill shutdown sequence"""
+        if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
+            hvac_mode = hvac_mode
+            #await self.client.shutdown_grill(self.grill_id)
