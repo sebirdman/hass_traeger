@@ -11,7 +11,9 @@ _Component to integrate with [Traeger WiFire Grills][traeger]._
 Platform | Description
 -- | --
 `sensor` | Shows various temperature readings from the grill or accessories
-`climate` | Allows temperature control of the grill
+`climate` | Allows temperature control of the grill and probe
+`number` | Allows minutes input to the timer
+`switch` | Allow SuperSmoke, Keepwarm, and connectivity switch
 
 ![device][deviceimg]
 ![grill][grillimg]
