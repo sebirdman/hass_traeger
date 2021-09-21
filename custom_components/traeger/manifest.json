@@ -3,7 +3,6 @@
   "name": "Traeger",
   "documentation": "https://github.com/sebirdman/hass_traeger",
   "issue_tracker": "https://github.com/sebirdman/hass_traeger/issues",
-  "iot_class": "cloud_push",
   "dependencies": [],
   "config_flow": true,
   "codeowners": [
