@@ -88,10 +88,6 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         return f"{self.grill_id}_climate"           
 
     @property
-    def unique_id(self):
-        return f"{self.grill_id}_probe_{self.sensor_id}"
-
-    @property
     def icon(self):
         return "mdi:grill"
 
