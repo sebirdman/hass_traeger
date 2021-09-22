@@ -9,7 +9,7 @@ from datetime import timedelta
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Config, HomeAssistant
+from homeassistant.core import Config, HomeAssistant, Event
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -22,6 +22,13 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     STARTUP_MESSAGE,
+)
+
+from homeassistant.const import (
+    EVENT_HOMEASSISTANT_STOP,
+    EVENT_STATE_CHANGED,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
 )
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -59,7 +66,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             hass.async_add_job(
                 hass.config_entries.async_forward_entry_setup(entry, platform)
             )
-
+    async def async_shutdown(event: Event):
+        """Shut down the client."""
+        await client.kill()
+        
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_shutdown)
     entry.add_update_listener(async_reload_entry)
     return True
 
