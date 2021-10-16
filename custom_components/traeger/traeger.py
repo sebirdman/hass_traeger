@@ -25,7 +25,7 @@ import homeassistant.const
 
 
 CLIENT_ID = "2fuohjtqv1e63dckp5v84rau0j"
-TIMEOUT = 10
+TIMEOUT = 60
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
