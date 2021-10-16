@@ -35,10 +35,10 @@ class traeger:
         self.username = username
         self.password = password
         self.mqtt_uuid = str(uuid.uuid1())
-        self.hass = hass
-        self.loop = hass.loop
         self.mqtt_thread_running = False
         self.mqtt_thread_refreshing = False
+        self.hass = hass
+        self.loop = hass.loop
         self.task = None
         self.mqtt_url = None
         self.mqtt_client = None
@@ -72,25 +72,15 @@ class traeger:
 
     async def refresh_token(self):
         if self.token_remaining() < 60:
-            try:
-                request_time = time.time()
-
-                response = await self.do_cognito()
-
-                self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
-                self.token = response["AuthenticationResult"]["IdToken"]
-            except KeyError as exception:
-                _LOGGER.error(
-                    "Failed to login %s - %s",
-                    response,
-                    exception,
-                )
+            request_time = time.time()
+            response = await self.do_cognito()
+            self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
+            self.token = response["AuthenticationResult"]["IdToken"]
 
     async def get_user_data(self):
         await self.refresh_token()
         return await self.api_wrapper("get", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/users/self",
                                    headers={'authorization': self.token})
-        _LOGGER.debug("Async Get_User_Data") 
 
     async def send_command(self, thingName, command):
         _LOGGER.debug("Send Command Topic: %s, Send Command: %s", thingName, command)
@@ -114,12 +104,12 @@ class traeger:
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
-        
+
     async def set_probe_temperature(self, thingName, temp):
-        await self.send_command(thingName, "14,{}".format(temp))  
-        
+        await self.send_command(thingName, "14,{}".format(temp))
+
     async def set_switch(self, thingName, switchval):
-        await self.send_command(thingName, str(switchval))        
+        await self.send_command(thingName, str(switchval))
 
     async def shutdown_grill(self, thingName):
         await self.send_command(thingName, "17")
@@ -212,7 +202,7 @@ class traeger:
 
     def grill_connect(self, client, userdata, flags, rc):
         pass
-    
+
     def mqtt_log(self, client, userdata, level, buf):
         _LOGGER.debug("MQTT Log Level: %s, MQTT Log BUF: %s", level, buf)
 
@@ -243,12 +233,12 @@ class traeger:
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["settings"]
-    
+
     def get_features_for_device(self, thingName):
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["features"]
-    
+
     def get_cloudconnect(self, thingName):
         if thingName not in self.grill_status:
             return False
@@ -276,11 +266,11 @@ class traeger:
         delay = 30
         _LOGGER.info(f"Call_Later in: {delay} seconds")
         self.task = self.loop.call_later(delay, self.syncmain)
-        
+
     def syncmain(self):
         _LOGGER.debug(f"@Call_Later SyncMain CreatingTask for async Main.")
-        self.hass.async_create_task(self.main()) 
-    
+        self.hass.async_create_task(self.main())
+
     async def main(self):
         _LOGGER.info(f"Current Main Loop Time: {time.time()}")
         _LOGGER.info(f"MQTT Logger Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
@@ -289,13 +279,13 @@ class traeger:
             self.mqtt_client.disconnect()
             self.mqtt_client = None
             await self.subscribe_to_grill_status()
-            self.mqtt_thread_refreshing = False     
+            self.mqtt_thread_refreshing = False
         _LOGGER.info(f"Call_Later @: {self.mqtt_url_expires}")
         delay = self.mqtt_url_remaining()
         if delay < 30:
-            delay = 30       
+            delay = 30
         self.task = self.loop.call_later(delay, self.syncmain)
-    
+
     async def kill(self):
         if self.mqtt_thread_running:
             _LOGGER.info(f"Killing Task")

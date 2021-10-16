@@ -3,6 +3,9 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 import voluptuous as vol
+import logging
+
+from .traeger import traeger
 
 from .const import (
     CONF_PASSWORD,
@@ -11,6 +14,7 @@ from .const import (
     PLATFORMS,
 )
 
+_LOGGER: logging.Logger = logging.getLogger(__package__)
 
 class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Blueprint."""
@@ -43,6 +47,11 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
             return await self._show_config_form(user_input)
 
+        user_input = {}
+        # Provide defaults for form
+        user_input[CONF_USERNAME] = ""
+        user_input[CONF_PASSWORD] = ""
+
         return await self._show_config_form(user_input)
 
     @staticmethod
@@ -55,7 +64,10 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
-                {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
+                {
+                    vol.Required(CONF_USERNAME, default=user_input[CONF_USERNAME]): str,
+                    vol.Required(CONF_PASSWORD, default=user_input[CONF_PASSWORD]): str,
+                }
             ),
             errors=self._errors,
         )
@@ -63,9 +75,15 @@ class BlueprintFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _test_credentials(self, username, password):
         """Return true if credentials is valid."""
         try:
-            # TODO: validate that credentials are correct
+            session = async_create_clientsession(self.hass)
+            client = traeger(username, password, self.hass, session)
+            await client.get_user_data()
             return True
-        except Exception:  # pylint: disable=broad-except
+        except Exception as exception:  # pylint: disable=broad-except
+            _LOGGER.error(
+                 "Failed to login %s",
+                 exception,
+            )
             pass
         return False
 

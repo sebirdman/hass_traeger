@@ -53,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
     client = traeger(username, password, hass, session)
+
     await client.start()
     grills = client.get_grills()
     for grill in grills:
@@ -69,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     async def async_shutdown(event: Event):
         """Shut down the client."""
         await client.kill()
-        
+
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, async_shutdown)
     entry.add_update_listener(async_reload_entry)
     return True
