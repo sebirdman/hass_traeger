@@ -31,8 +31,8 @@ class TraegerNumberEntity(NumberEntity, IntegrationBlueprintEntity):
         self.grill_id = grill_id
         self.client = client
         self.devname = devname
-        self.grill_details = None
-        self.grill_state = None
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_details = self.client.get_details_for_device(self.grill_id)
 
         # Tell the Traeger client to call grill_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_update)
@@ -40,7 +40,7 @@ class TraegerNumberEntity(NumberEntity, IntegrationBlueprintEntity):
     def grill_update(self):
         self.grill_state = self.client.get_state_for_device(self.grill_id)
         self.grill_details = self.client.get_details_for_device(self.grill_id)
-        
+
         # Tell HA we have an update
         self.schedule_update_ha_state()
 

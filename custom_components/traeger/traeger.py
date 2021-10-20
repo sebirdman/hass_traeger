@@ -74,7 +74,6 @@ class traeger:
         if self.token_remaining() < 60:
             request_time = time.time()
             response = await self.do_cognito()
-            _LOGGER.error(f"Response {response}")
             self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
             self.token = response["AuthenticationResult"]["IdToken"]
 
@@ -120,7 +119,6 @@ class traeger:
 
     async def update_grills(self):
         json = await self.get_user_data()
-        _LOGGER.error(f"User Data Response {json}")
         self.grills = json["things"]
 
     def get_grills(self):
@@ -201,15 +199,13 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
-        _LOGGER.error("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
+        _LOGGER.info("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
         _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
-            _LOGGER.error(f"Grill id {grill_id} state is now {self.grill_status[grill_id]}")
             if grill_id in self.grill_callbacks:
                 for callback in self.grill_callbacks[grill_id]:
-                    _LOGGER.error(f"Calling Callbacks for {grill_id}")
                     callback()
 
     def grill_connect(self, client, userdata, flags, rc):
