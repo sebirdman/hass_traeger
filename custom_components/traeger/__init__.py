@@ -55,11 +55,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     client = traeger(username, password, hass, session)
 
     await client.start()
-    grills = client.get_grills()
-    for grill in grills:
-        grill_id = grill["thingName"]
-        await client.update_state(grill_id)
-
     hass.data[DOMAIN][entry.entry_id] = client
 
     for platform in PLATFORMS:
