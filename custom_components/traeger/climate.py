@@ -56,10 +56,10 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
     def __init__(self, client, grill_id):
         self.grill_id = grill_id
         self.client = client
-        self.grill_details = None
-        self.grill_state = None
-        self.grill_units = None
-        self.grill_limits = None
+        self.grill_details = self.client.get_details_for_device(self.grill_id)
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_units = self.client.get_units_for_device(self.grill_id)
+        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
 
         # Tell the Traeger client to call grill_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_update)
@@ -188,9 +188,13 @@ class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         self.grill_id = grill_id
         self.client = client
         self.sensor_id = sensor_id
-        self.grill_details = None
-        self.grill_state = None
-        self.grill_units = None
+        self.grill_details = self.client.get_details_for_device(self.grill_id)
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_units = self.client.get_units_for_device(self.grill_id)
+        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
+        self.grill_accessory = self.client.get_details_for_accessory(
+            self.grill_id, self.sensor_id
+        )
 
         # Tell the Traeger client to call grill_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_update)
