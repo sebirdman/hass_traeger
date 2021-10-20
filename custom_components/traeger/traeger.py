@@ -74,6 +74,7 @@ class traeger:
         if self.token_remaining() < 60:
             request_time = time.time()
             response = await self.do_cognito()
+            _LOGGER.error(f"Response {response}")
             self.token_expires = response["AuthenticationResult"]["ExpiresIn"] + request_time
             self.token = response["AuthenticationResult"]["IdToken"]
 
@@ -119,6 +120,7 @@ class traeger:
 
     async def update_grills(self):
         json = await self.get_user_data()
+        _LOGGER.error(f"User Data Response {json}")
         self.grills = json["things"]
 
     def get_grills(self):
@@ -131,6 +133,13 @@ class traeger:
 
     def mqtt_url_remaining(self):
         return self.mqtt_url_expires - time.time()
+
+    def grill_subscribe(self, client, userdata, mid, granted_qos):
+        for grill in self.grills:
+            grill_id = grill["thingName"]
+            if grill_id in self.grill_status:
+                del self.grill_status[grill_id]
+            self.update_state(grill_id)
 
     async def refresh_mqtt_url(self):
         await self.refresh_token()
@@ -165,13 +174,14 @@ class traeger:
                     time.sleep(1)
         _LOGGER.debug(f"Should be the end of the thread.")
 
-    async def get_mqtt_client(self, on_connect, on_message, on_log):
+    async def get_mqtt_client(self, on_connect, on_message, on_log, on_subscribe):
         if self.mqtt_client == None:
             await self.refresh_mqtt_url()
             mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
             self.mqtt_client = mqtt.Client(transport="websockets")
             self.mqtt_client.on_connect = on_connect
             self.mqtt_client.on_message = on_message
+            self.mqtt_client.on_subscribe = on_subscribe
             self.mqtt_client.on_log = on_log   #Only need this for troubleshooting
             headers = {
                 "Host": "{0:s}".format(mqtt_parts.netloc),
@@ -191,28 +201,29 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
-        _LOGGER.info("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
+        _LOGGER.error("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
         _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
+            _LOGGER.error(f"Grill id {grill_id} state is now {self.grill_status[grill_id]}")
             if grill_id in self.grill_callbacks:
                 for callback in self.grill_callbacks[grill_id]:
+                    _LOGGER.error(f"Calling Callbacks for {grill_id}")
                     callback()
 
     def grill_connect(self, client, userdata, flags, rc):
-        pass
+        _LOGGER.info("Grill Connected")
+        for grill in self.grills:
+            grill_id = grill["thingName"]
+            if grill_id in self.grill_status:
+                del self.grill_status[grill_id]
+            client.subscribe(
+                ("prod/thing/update/{}".format(grill_id), 1))
+            self.update_state(grill_id)
 
     def mqtt_log(self, client, userdata, level, buf):
         _LOGGER.debug("MQTT Log Level: %s, MQTT Log BUF: %s", level, buf)
-
-    async def subscribe_to_grill_status(self):
-        client = await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log)
-        for grill in self.grills:
-            if grill["thingName"] in self.grill_status:
-                del self.grill_status[grill["thingName"]]
-            client.subscribe(
-                ("prod/thing/update/{}".format(grill["thingName"]), 1))
 
     def get_state_for_device(self, thingName):
         if thingName not in self.grill_status:
@@ -255,6 +266,8 @@ class traeger:
 
     def get_details_for_accessory(self, thingName, accessory_id):
         state = self.get_state_for_device(thingName)
+        if state is None:
+            return None
         for accessory in state["acc"]:
             if accessory["uuid"] == accessory_id:
                 return accessory
@@ -262,7 +275,7 @@ class traeger:
 
     async def start(self):
         await self.update_grills()
-        await self.subscribe_to_grill_status()
+        await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log, self.grill_subscribe)
         delay = 30
         _LOGGER.info(f"Call_Later in: {delay} seconds")
         self.task = self.loop.call_later(delay, self.syncmain)
@@ -278,7 +291,7 @@ class traeger:
             self.mqtt_thread_refreshing = True
             self.mqtt_client.disconnect()
             self.mqtt_client = None
-            await self.subscribe_to_grill_status()
+            await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log, self.grill_subscribe)
             self.mqtt_thread_refreshing = False
         _LOGGER.info(f"Call_Later @: {self.mqtt_url_expires}")
         delay = self.mqtt_url_remaining()
