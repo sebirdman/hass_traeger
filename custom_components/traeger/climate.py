@@ -1,7 +1,4 @@
 """Climate platform for Traeger grills"""
-
-import logging
-
 from homeassistant.components.climate import (
     ClimateEntity,
 )
@@ -18,7 +15,6 @@ from homeassistant.const import (
 )
 
 from .const import (
-    DEFAULT_NAME,
     DOMAIN,
     GRILL_MODE_OFFLINE,
     GRILL_MODE_COOL_DOWN,
@@ -30,9 +26,34 @@ from .const import (
     GRILL_MODE_SLEEPING,
 )
 
-from .entity import IntegrationBlueprintEntity
-from .traeger import traeger
+from .entity import TraegerBaseEntity
 
+class TraegerGrillMonitor():
+
+    def __init__(self, client, grill_id, async_add_devices):
+        self.client = client
+        self.grill_id = grill_id
+        self.async_add_devices = async_add_devices
+        self.accessory_status = {}
+
+        self.device_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_add_accessories()
+        self.client.set_callback_for_grill(self.grill_id, self.grill_monitor_internal)
+
+    def grill_monitor_internal(self):
+        self.device_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_add_accessories()
+
+    def grill_add_accessories(self):
+        if self.device_state is None:
+            return
+        for accessory in self.device_state["acc"]:
+            if accessory["type"] == "probe":
+                if accessory["uuid"] not in self.accessory_status:
+                    self.async_add_devices(
+                        [AccessoryTraegerClimateEntity(self.client, self.grill_id, accessory["uuid"])]
+                    )
+                    self.accessory_status[accessory["uuid"]] = True
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup climate platform."""
@@ -40,36 +61,22 @@ async def async_setup_entry(hass, entry, async_add_devices):
     grills = client.get_grills()
     for grill in grills:
         grill_id = grill["thingName"]
-        state = client.get_state_for_device(grill_id)
-        async_add_devices([TraegerClimateEntity(client, grill_id)])
-        if state is None:
-            return
-        for accessory in state["acc"]:
-            if accessory["type"] == "probe":
-                async_add_devices(
-                    [AccessoryTraegerClimateEntity(client, grill_id, accessory["uuid"])]
-                )
+        async_add_devices([TraegerClimateEntity(client, grill_id, "Climate")])
+        TraegerGrillMonitor(client, grill_id, async_add_devices)
 
-class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
-    """Climate entity for Traeger grills"""
 
-    def __init__(self, client, grill_id):
-        self.grill_id = grill_id
-        self.client = client
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_units = self.client.get_units_for_device(self.grill_id)
-        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
+class TraegerBaseClimate(ClimateEntity, TraegerBaseEntity):
+
+    def __init__(self, client, grill_id, friendly_name):
+        super().__init__(client, grill_id)
+        self.friendly_name = friendly_name
 
         # Tell the Traeger client to call grill_update() when it gets an update
-        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
+        self.client.set_callback_for_grill(self.grill_id, self.grill_climate_update)
 
-    def grill_update(self):
+    def grill_climate_update(self):
         """This gets called when the grill has an update. Update state variable"""
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_units = self.client.get_units_for_device(self.grill_id)
-        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
+        self.grill_refresh_state()
 
         # Tell HA we have an update
         self.schedule_update_ha_state()
@@ -79,17 +86,9 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
     def name(self):
         """Return the name of the grill"""
         if self.grill_details is None:
-            return f"{self.grill_id}_climate"       
+            return f"{self.grill_id} {self.friendly_name}"
         name = self.grill_details["friendlyName"]
-        return f"{name} Climate"                   
-
-    @property
-    def unique_id(self):
-        return f"{self.grill_id}_climate"           
-
-    @property
-    def icon(self):
-        return "mdi:grill"
+        return f"{name} {self.friendly_name}"
 
     # Climate Properties
     @property
@@ -100,14 +99,42 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
             return TEMP_FAHRENHEIT
 
     @property
+    def target_temperature_step(self):
+        return 5
+
+    @property
+    def supported_features(self):
+        """Return the list of supported features for the grill"""
+        return SUPPORT_TARGET_TEMPERATURE
+
+class TraegerClimateEntity(TraegerBaseClimate):
+    """Climate entity for Traeger grills"""
+
+    def __init__(self, client, grill_id, friendly_name):
+        super().__init__(client, grill_id, friendly_name)
+
+    @property
+    def unique_id(self):
+        return f"{self.grill_id}_climate"
+
+    @property
+    def icon(self):
+        return "mdi:grill"
+
+    @property
+    def available(self):
+        """Reports unavailable when the grill is powered off"""
+        if self.grill_state is None:
+            return False
+        else:
+            return self.grill_state["connected"]
+
+    # Climate Properties
+    @property
     def current_temperature(self):
         if self.grill_state is None:
             return 0
         return self.grill_state["grill"]
-
-    @property
-    def target_temperature_step(self):
-        return 5
 
     @property
     def target_temperature(self):
@@ -165,11 +192,6 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         """
         return (HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_COOL)
 
-    @property
-    def supported_features(self):
-        """Return the list of supported features for the grill"""
-        return SUPPORT_TARGET_TEMPERATURE
-
     # Climate Methods
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -181,30 +203,21 @@ class TraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             await self.client.shutdown_grill(self.grill_id)
 
-class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
+class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     """Climate entity for Traeger grills"""
 
     def __init__(self, client, grill_id, sensor_id):
-        self.grill_id = grill_id
-        self.client = client
+        super().__init__(client, grill_id, f"Probe {sensor_id}")
         self.sensor_id = sensor_id
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_units = self.client.get_units_for_device(self.grill_id)
-        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
         self.grill_accessory = self.client.get_details_for_accessory(
             self.grill_id, self.sensor_id
         )
 
         # Tell the Traeger client to call grill_update() when it gets an update
-        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
+        self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
 
-    def grill_update(self):
+    def grill_accessory_update(self):
         """This gets called when the grill has an update. Update state variable"""
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_units = self.client.get_units_for_device(self.grill_id)
-        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
         self.grill_accessory = self.client.get_details_for_accessory(
             self.grill_id, self.sensor_id
         )
@@ -219,15 +232,7 @@ class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         if self.grill_state is None:
             return False
         else:
-            return True if self.grill_state["connected"] == True else False
-
-    @property
-    def name(self):
-        """Return the name of the grill"""
-        if self.grill_details is None:
-            return f"{self.grill_id}_probe_{self.sensor_id}"
-        name = self.grill_details["friendlyName"]
-        return f"{name} Probe {self.sensor_id}"
+            return True if self.grill_state["probe_con"] == 1 else False
 
     @property
     def unique_id(self):
@@ -239,27 +244,16 @@ class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
 
     # Climate Properties
     @property
-    def temperature_unit(self):
-        if self.grill_units == TEMP_CELSIUS:
-            return TEMP_CELSIUS
-        else:
-            return TEMP_FAHRENHEIT
-
-    @property
     def current_temperature(self):
-        if self.grill_state is None:
+        if self.grill_accessory is None:
             return 0
         return self.grill_accessory["probe"]["get_temp"]
 
     @property
     def target_temperature(self):
-        if self.grill_state is None:
+        if self.grill_accessory is None:
             return 0
         return self.grill_accessory["probe"]["set_temp"]
-
-    @property
-    def target_temperature_step(self):
-        return 5
 
     @property
     def max_temp(self):
@@ -298,11 +292,6 @@ class AccessoryTraegerClimateEntity(ClimateEntity, IntegrationBlueprintEntity):
         Need to be a subset of HVAC_MODES.
         """
         return (HVAC_MODE_HEAT, HVAC_MODE_OFF)
-
-    @property
-    def supported_features(self):
-        """Return the list of supported features for the grill"""
-        return SUPPORT_TARGET_TEMPERATURE
 
     # Climate Methods
     async def async_set_temperature(self, **kwargs):

@@ -1,18 +1,13 @@
 """Switch platform for Traeger."""
-import logging
-
 from homeassistant.components.switch import SwitchEntity
 
 from .const import (
-    DEFAULT_NAME,
     DOMAIN,
     GRILL_MODE_CUSTOM_COOK,
     GRILL_MODE_IGNITING,
 )
 
-from .entity import IntegrationBlueprintEntity
-from .traeger import traeger
-
+from .entity import TraegerBaseEntity
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup Switch platform."""
@@ -20,39 +15,16 @@ async def async_setup_entry(hass, entry, async_add_devices):
     grills = client.get_grills()
     for grill in grills:
         grill_id = grill["thingName"]
-        #await client.update_state(grill_id)
-        state = client.get_state_for_device(grill_id)
-        if state is None:
-            return
-        state = client.get_features_for_device(grill_id)
-        if state is None:
-            return
-        if state["super_smoke_enabled"]:
-            async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "smoke", "mdi:weather-fog", 20, 21)])
-        async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "keepwarm", "mdi:beach", 18, 19)])
-        async_add_devices([TraegerConnectEntity(client, grill["thingName"], "Connect")])
+        async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "smoke", "Super Smoke Enabled", "mdi:weather-fog", 20, 21)])
+        async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "keepwarm", "Keep Warm Enabled", "mdi:beach", 18, 19)])
+        async_add_devices([TraegerConnectEntity(client, grill["thingName"], "connect", "Connect")])
 
-class TraegerConnectEntity(SwitchEntity, IntegrationBlueprintEntity):
-    """Traeger Switch class."""
-
-    def __init__(self, client, grill_id, devname):
-        self.grill_id = grill_id
-        self.client = client
+class TraegerBaseSwitch(SwitchEntity, TraegerBaseEntity):
+    def __init__(self, client, grill_id, devname, friendly_name):
+        TraegerBaseEntity.__init__(self, client, grill_id)
         self.devname = devname
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_cloudconnect = self.client.get_cloudconnect(self.grill_id)
-
-        # Tell the Traeger client to call grill_update() when it gets an update
-        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
-
-    def grill_update(self):
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-        self.grill_cloudconnect = self.client.get_cloudconnect(self.grill_id)
-
-        # Tell HA we have an update
-        self.schedule_update_ha_state()
+        self.friendly_name = friendly_name
+        self.grill_register_callback()
 
     # Generic Properties
     @property
@@ -61,12 +33,17 @@ class TraegerConnectEntity(SwitchEntity, IntegrationBlueprintEntity):
         if self.grill_details is None:
             return f"{self.grill_id}_{self.devname}"              #Returns EntID
         name = self.grill_details["friendlyName"]
-        return f"{name} {self.devname.capitalize()}"              #Returns Friendly Name
+        return f"{name} {self.friendly_name}"              #Returns Friendly Name
 
     @property
     def unique_id(self):
         return f"{self.grill_id}_{self.devname}"                  #SeeminglyDoes Nothing?
 
+
+class TraegerConnectEntity(TraegerBaseSwitch):
+    """Traeger Switch class."""
+
+    # Generic Properties
     @property
     def icon(self):
         return "mdi:lan-connect"
@@ -87,45 +64,28 @@ class TraegerConnectEntity(SwitchEntity, IntegrationBlueprintEntity):
         """Set new Switch Val."""
         await self.client.kill()
 
-class TraegerSwitchEntity(SwitchEntity, IntegrationBlueprintEntity):
+class TraegerSwitchEntity(TraegerBaseSwitch):
     """Traeger Switch class."""
 
-    def __init__(self, client, grill_id, devname, iconinp, on_cmd, off_cmd):
-        self.grill_id = grill_id
-        self.client = client
-        self.devname = devname
+    def __init__(self, client, grill_id, devname, friendly_name, iconinp, on_cmd, off_cmd):
+        super().__init__(client, grill_id, devname, friendly_name)
         self.iconinp = iconinp
         self.on_cmd = on_cmd
         self.off_cmd = off_cmd
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-
-        # Tell the Traeger client to call grill_update() when it gets an update
-        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
-
-    def grill_update(self):
-        self.grill_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_details = self.client.get_details_for_device(self.grill_id)
-
-        # Tell HA we have an update
-        self.schedule_update_ha_state()
 
     # Generic Properties
     @property
-    def name(self):
-        """Return the name of the grill"""
-        if self.grill_details is None:
-            return f"{self.grill_id}_{self.devname}"              #Returns EntID
-        name = self.grill_details["friendlyName"]
-        return f"{name} {self.devname.capitalize()}"              #Returns Friendly Name
-
-    @property
-    def unique_id(self):
-        return f"{self.grill_id}_{self.devname}"                  #SeeminglyDoes Nothing?
-
-    @property
     def icon(self):
         return self.iconinp
+
+    @property
+    def available(self):
+        if self.grill_state is None:
+            return False
+        else:
+            if GRILL_MODE_IGNITING <= self.grill_state['system_status'] <= GRILL_MODE_CUSTOM_COOK:
+                return True
+        return False
 
     # Switch Properties
     @property
