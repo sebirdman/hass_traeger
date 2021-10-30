@@ -46,7 +46,7 @@ class traeger:
         self.access_token = None
         self.token = None
         self.token_expires = 0
-        self.mqtt_url_expires = 0
+        self.mqtt_url_expires = time.time()
         self.request = request_library
         self.grill_callbacks = {}
 
@@ -97,10 +97,7 @@ class traeger:
         })
 
     async def update_state(self, thingName):
-        self.grill_status = {}
         await self.send_command(thingName, "90")
-        while not bool(self.grill_status):
-            await asyncio.sleep(1)
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
@@ -199,7 +196,6 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
-        _LOGGER.info("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
         _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
@@ -216,7 +212,6 @@ class traeger:
                 del self.grill_status[grill_id]
             client.subscribe(
                 ("prod/thing/update/{}".format(grill_id), 1))
-            self.update_state(grill_id)
 
     def mqtt_log(self, client, userdata, level, buf):
         _LOGGER.debug("MQTT Log Level: %s, MQTT Log BUF: %s", level, buf)
@@ -271,7 +266,6 @@ class traeger:
 
     async def start(self):
         await self.update_grills()
-        await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log, self.grill_subscribe)
         delay = 30
         _LOGGER.info(f"Call_Later in: {delay} seconds")
         self.task = self.loop.call_later(delay, self.syncmain)
@@ -281,15 +275,16 @@ class traeger:
         self.hass.async_create_task(self.main())
 
     async def main(self):
-        _LOGGER.info(f"Current Main Loop Time: {time.time()}")
-        _LOGGER.info(f"MQTT Logger Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
-        if self.mqtt_url_remaining() < 60 and self.mqtt_thread_running:
+        _LOGGER.debug(f"Current Main Loop Time: {time.time()}")
+        _LOGGER.debug(f"MQTT Logger Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
+        if self.mqtt_url_remaining() < 60:
             self.mqtt_thread_refreshing = True
-            self.mqtt_client.disconnect()
-            self.mqtt_client = None
+            if self.mqtt_thread_running:
+                self.mqtt_client.disconnect()
+                self.mqtt_client = None
             await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log, self.grill_subscribe)
             self.mqtt_thread_refreshing = False
-        _LOGGER.info(f"Call_Later @: {self.mqtt_url_expires}")
+        _LOGGER.debug(f"Call_Later @: {self.mqtt_url_expires}")
         delay = self.mqtt_url_remaining()
         if delay < 30:
             delay = 30
