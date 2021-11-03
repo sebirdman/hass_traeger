@@ -27,6 +27,9 @@ class TraegerBaseEntity(Entity):
     def grill_update_internal(self):
         self.grill_refresh_state()
 
+        if self.hass is None:
+            return
+
         # Tell HA we have an update
         self.schedule_update_ha_state()
 
