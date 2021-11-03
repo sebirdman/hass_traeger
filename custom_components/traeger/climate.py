@@ -102,16 +102,7 @@ class TraegerClimateEntity(TraegerBaseClimate):
 
     def __init__(self, client, grill_id, friendly_name):
         super().__init__(client, grill_id, friendly_name)
-        # Tell the Traeger client to call grill_update() when it gets an update
-        self.client.set_callback_for_grill(self.grill_id, self.grill_climate_update)
-
-    def grill_climate_update(self):
-        """This gets called when the grill has an update. Update state variable"""
-        self.grill_refresh_state()
-
-        # Tell HA we have an update
-        self.schedule_update_ha_state()
-
+        self.grill_register_callback()
 
     @property
     def unique_id(self):
