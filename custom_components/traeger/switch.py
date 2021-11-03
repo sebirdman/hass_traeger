@@ -15,7 +15,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     grills = client.get_grills()
     for grill in grills:
         grill_id = grill["thingName"]
-        async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "smoke", "Super Smoke Enabled", "mdi:weather-fog", 20, 21)])
+        async_add_devices([TraegerSuperSmokeEntity(client, grill["thingName"], "smoke", "Super Smoke Enabled", "mdi:weather-fog", 20, 21)])
         async_add_devices([TraegerSwitchEntity(client, grill["thingName"], "keepwarm", "Keep Warm Enabled", "mdi:beach", 18, 19)])
         async_add_devices([TraegerConnectEntity(client, grill["thingName"], "connect", "Connect")])
 
@@ -69,6 +69,7 @@ class TraegerSwitchEntity(TraegerBaseSwitch):
 
     def __init__(self, client, grill_id, devname, friendly_name, iconinp, on_cmd, off_cmd):
         super().__init__(client, grill_id, devname, friendly_name)
+        self.grill_register_callback()
         self.iconinp = iconinp
         self.on_cmd = on_cmd
         self.off_cmd = off_cmd
@@ -104,3 +105,15 @@ class TraegerSwitchEntity(TraegerBaseSwitch):
         """Set new Switch Val."""
         if GRILL_MODE_IGNITING <= self.grill_state['system_status'] <= GRILL_MODE_CUSTOM_COOK:
             await self.client.set_switch(self.grill_id, self.off_cmd)
+
+class TraegerSuperSmokeEntity(TraegerSwitchEntity):
+    """Traeger Super Smoke Switch class."""
+
+    @property
+    def available(self):
+        if self.grill_state is None:
+            return False
+        else:
+            if GRILL_MODE_IGNITING <= self.grill_state['system_status'] <= GRILL_MODE_CUSTOM_COOK:
+                return True if self.grill_features["super_smoke_enabled"] == 1 else False
+        return False
