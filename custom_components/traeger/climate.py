@@ -194,12 +194,27 @@ class TraegerClimateEntity(TraegerBaseClimate):
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             await self.client.shutdown_grill(self.grill_id)
 
-class AccessoryTraegerClimateEntity(TraegerBaseClimate):
+class AccessoryTraegerClimateEntity(TraegerBaseEntity):
     """Climate entity for Traeger grills"""
 
     def __init__(self, client, grill_id, sensor_id):
-        super().__init__(client, grill_id, f"Probe {sensor_id}")
+        self.grill_id = grill_id
+        self.client = client
         self.sensor_id = sensor_id
+        self.grill_details = None
+        self.grill_state = None
+        self.grill_units = None
+
+        # Tell the Traeger client to call grill_update() when it gets an update
+        self.client.set_callback_for_grill(self.grill_id, self.grill_update)
+
+    def grill_update(self):
+        """This gets called when the grill has an update. Update state variable"""
+        self.grill_details = self.client.get_details_for_device(self.grill_id)
+        self.grill_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_units = self.client.get_units_for_device(self.grill_id)
+        self.grill_limits = self.client.get_limits_for_device(self.grill_id)
+
         self.grill_accessory = self.client.get_details_for_accessory(
             self.grill_id, self.sensor_id
         )
