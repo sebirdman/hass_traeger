@@ -1,6 +1,5 @@
 """
 Library to interact with traeger grills
-
 Copyright 2020 by Keith Baker All rights reserved.
 This file is part of the traeger python library,
 and is released under the "GNU GENERAL PUBLIC LICENSE Version 2".
@@ -81,7 +80,6 @@ class traeger:
         await self.refresh_token()
         return await self.api_wrapper("get", "https://1ywgyc65d1.execute-api.us-west-2.amazonaws.com/prod/users/self",
                                    headers={'authorization': self.token})
-        _LOGGER.debug("Async Get_User_Data") 
 
     async def send_command(self, thingName, command):
         _LOGGER.debug("Send Command Topic: %s, Send Command: %s", thingName, command)
@@ -102,12 +100,6 @@ class traeger:
 
     async def set_temperature(self, thingName, temp):
         await self.send_command(thingName, "11,{}".format(temp))
-        
-    async def set_probe_temperature(self, thingName, temp):
-        await self.send_command(thingName, "14,{}".format(temp))  
-        
-    async def set_switch(self, thingName, switchval):
-        await self.send_command(thingName, str(switchval))        
 
     async def set_probe_temperature(self, thingName, temp):
         await self.send_command(thingName, "14,{}".format(temp))
@@ -203,8 +195,7 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
-        _LOGGER.debug("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
-        _LOGGER.info(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
+        _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
@@ -243,16 +234,6 @@ class traeger:
         if thingName not in self.grill_status:
             return None
         return self.grill_status[thingName]["settings"]
-    
-    def get_features_for_device(self, thingName):
-        if thingName not in self.grill_status:
-            return None
-        return self.grill_status[thingName]["features"]
-    
-    def get_cloudconnect(self, thingName):
-        if thingName not in self.grill_status:
-            return False
-        return self.mqtt_thread_running
 
     def get_features_for_device(self, thingName):
         if thingName not in self.grill_status:
