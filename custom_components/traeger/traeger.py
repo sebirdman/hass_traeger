@@ -1,5 +1,6 @@
 """
 Library to interact with traeger grills
+
 Copyright 2020 by Keith Baker All rights reserved.
 This file is part of the traeger python library,
 and is released under the "GNU GENERAL PUBLIC LICENSE Version 2".
