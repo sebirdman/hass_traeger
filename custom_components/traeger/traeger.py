@@ -315,7 +315,7 @@ class traeger:
     ) -> dict:
         """Get information from the API."""
         try:
-            async with async_timeout.timeout(TIMEOUT, loop=asyncio.get_event_loop()):
+            async with async_timeout.timeout(TIMEOUT):
                 if method == "get":
                     response = await self.request.get(url, headers=headers)
                     data = await response.read()
