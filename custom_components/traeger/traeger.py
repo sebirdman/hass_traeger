@@ -196,7 +196,8 @@ class traeger:
         return self.mqtt_client
 
     def grill_message(self, client, userdata, message):
-        _LOGGER.debug(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
+        _LOGGER.debug("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
+        _LOGGER.info(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
             grill_id = message.topic[len("prod/thing/update/"):]
             self.grill_status[grill_id] = json.loads(message.payload)
@@ -315,7 +316,7 @@ class traeger:
     ) -> dict:
         """Get information from the API."""
         try:
-            async with async_timeout.timeout(TIMEOUT, loop=asyncio.get_event_loop()):
+            async with async_timeout.timeout(TIMEOUT):
                 if method == "get":
                     response = await self.request.get(url, headers=headers)
                     data = await response.read()
