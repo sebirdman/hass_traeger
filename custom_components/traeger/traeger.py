@@ -37,6 +37,7 @@ class traeger:
         self.mqtt_uuid = str(uuid.uuid1())
         self.mqtt_thread_running = False
         self.mqtt_thread_refreshing = False
+        self.grills_active = False
         self.hass = hass
         self.loop = hass.loop
         self.task = None
@@ -49,6 +50,8 @@ class traeger:
         self.mqtt_url_expires = time.time()
         self.request = request_library
         self.grill_callbacks = {}
+        self.mqtt_client_inloop = False
+        self.autodisconnect = True
 
     def token_remaining(self):
         return self.token_expires - time.time()
@@ -129,13 +132,6 @@ class traeger:
     def mqtt_url_remaining(self):
         return self.mqtt_url_expires - time.time()
 
-    def grill_subscribe(self, client, userdata, mid, granted_qos):
-        for grill in self.grills:
-            grill_id = grill["thingName"]
-            if grill_id in self.grill_status:
-                del self.grill_status[grill_id]
-            self.update_state(grill_id)
-
     async def refresh_mqtt_url(self):
         await self.refresh_token()
         if self.mqtt_url_remaining() < 60:
@@ -164,38 +160,77 @@ class traeger:
         if self.mqtt_client != None:
             _LOGGER.debug(f"Start MQTT Loop Forever")
             while self.mqtt_thread_running:
+                self.mqtt_client_inloop = True
                 self.mqtt_client.loop_forever()
+                self.mqtt_client_inloop = False
                 while (self.mqtt_url_remaining() < 60 or self.mqtt_thread_refreshing) and self.mqtt_thread_running:
                     time.sleep(1)
         _LOGGER.debug(f"Should be the end of the thread.")
 
-    async def get_mqtt_client(self, on_connect, on_message, on_log, on_subscribe):
-        if self.mqtt_client == None:
-            await self.refresh_mqtt_url()
-            mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
+    async def get_mqtt_client(self):
+        await self.refresh_mqtt_url()
+        if self.mqtt_client != None:
+            _LOGGER.debug(f"ReInit Client")
+            #self.mqtt_client.reinitialise()                            #Reint doesn't accept Transport.
+            #self.mqtt_client = mqtt.Client(transport="websockets")
+        else:
             self.mqtt_client = mqtt.Client(transport="websockets")
-            self.mqtt_client.on_connect = on_connect
-            self.mqtt_client.on_message = on_message
-            self.mqtt_client.on_subscribe = on_subscribe
-            self.mqtt_client.on_log = on_log   #Only need this for troubleshooting
-            headers = {
-                "Host": "{0:s}".format(mqtt_parts.netloc),
-            }
-            self.mqtt_client.ws_set_options(path="{}?{}".format(
-                mqtt_parts.path, mqtt_parts.query), headers=headers)
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-            self.mqtt_client.tls_set_context(context)
-            self.mqtt_client.connect(mqtt_parts.netloc, 443)
-            _LOGGER.debug(f"Thread Active Count:{threading.active_count()}")
-            if self.mqtt_thread_running == False:
-                self.mqtt_thread = threading.Thread(target=self._mqtt_connect_func)
-                self.mqtt_thread_running = True
-                self.mqtt_thread.start()
-        return self.mqtt_client
+            #self.mqtt_client.on_log = self.mqtt_onlog                  #logging passed via enable_logger this would be redundant.
+            self.mqtt_client.on_connect = self.mqtt_onconnect
+            self.mqtt_client.on_connect_fail = self.mqtt_onconnectfail
+            self.mqtt_client.on_subscribe = self.mqtt_onsubscribe
+            self.mqtt_client.on_message = self.mqtt_onmessage
+            if _LOGGER.level <= 10:                                     #Add these callbacks only if our logging is Debug or less.
+                self.mqtt_client.enable_logger(_LOGGER)
+                self.mqtt_client.on_publish = self.mqtt_onpublish       #We dont Publish to MQTT
+                self.mqtt_client.on_unsubscribe = self.mqtt_onunsubscribe
+                self.mqtt_client.on_disconnect = self.mqtt_ondisconnect
+                self.mqtt_client.on_socket_open = self.mqtt_onsocketopen
+                self.mqtt_client.on_socket_close = self.mqtt_onsocketclose
+                self.mqtt_client.on_socket_register_write = self.mqtt_onsocketregisterwrite
+                self.mqtt_client.on_socket_unregister_write = self.mqtt_onsocketunregisterwrite
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                self.mqtt_client.tls_set_context(context)
+                self.mqtt_client.reconnect_delay_set(min_delay=10, max_delay=160)
+        mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
+        headers = {
+            "Host": "{0:s}".format(mqtt_parts.netloc),
+        }
+        self.mqtt_client.ws_set_options(path="{}?{}".format(
+        mqtt_parts.path, mqtt_parts.query), headers=headers)     
+        _LOGGER.info(f"Thread Active Count:{threading.active_count()}")
+        self.mqtt_client.connect(mqtt_parts.netloc, 443, keepalive=300)
+        if self.mqtt_thread_running == False:
+            self.mqtt_thread = threading.Thread(target=self._mqtt_connect_func)
+            self.mqtt_thread_running = True
+            self.mqtt_thread.start()
 
-    def grill_message(self, client, userdata, message):
+#===========================Paho MQTT Functions=======================================================
+    def mqtt_onlog(self, client, userdata, level, buf):
+        _LOGGER.debug(f"OnLog Callback. Client:{client} userdata:{userdata} level:{level} buf:{buf}")
+    def mqtt_onconnect(self, client, userdata, flags, rc):
+        _LOGGER.info("Grill Connected")
+        for grill in self.grills:
+            grill_id = grill["thingName"]
+            if grill_id in self.grill_status:
+                del self.grill_status[grill_id]
+            client.subscribe(
+                ("prod/thing/update/{}".format(grill_id), 1))
+    def mqtt_onconnectfail(self, client, userdata):
+        _LOGGER.debug(f"Connect Fail Callback. Client:{client} userdata:{userdata}")
+        _LOGGER.warning("Grill Connect Failed! MQTT Client Kill.")
+        self.hass.async_create_task(self.kill())                    #Shutdown if we arn't getting anywhere.
+    def mqtt_onsubscribe(self, client, userdata, mid, granted_qos):
+        _LOGGER.debug(f"OnSubscribe Callback. Client:{client} userdata:{userdata} mid:{mid} granted_qos:{granted_qos}")
+        for grill in self.grills:
+            grill_id = grill["thingName"]
+            if grill_id in self.grill_status:
+                del self.grill_status[grill_id]
+            #self.update_state(grill_id)
+            self.hass.async_create_task(self.update_state(grill_id))
+    def mqtt_onmessage(self, client, userdata, message):
         _LOGGER.debug("grill_message: message.topic = %s, message.payload = %s", message.topic, message.payload)
         _LOGGER.info(f"Token Time Remaining:{self.token_remaining()} MQTT Time Remaining:{self.mqtt_url_remaining()}")
         if message.topic.startswith("prod/thing/update/"):
@@ -204,18 +239,30 @@ class traeger:
             if grill_id in self.grill_callbacks:
                 for callback in self.grill_callbacks[grill_id]:
                     callback()
-
-    def grill_connect(self, client, userdata, flags, rc):
-        _LOGGER.info("Grill Connected")
-        for grill in self.grills:
-            grill_id = grill["thingName"]
-            if grill_id in self.grill_status:
-                del self.grill_status[grill_id]
-            client.subscribe(
-                ("prod/thing/update/{}".format(grill_id), 1))
-
-    def mqtt_log(self, client, userdata, level, buf):
-        _LOGGER.debug("MQTT Log Level: %s, MQTT Log BUF: %s", level, buf)
+            if self.grills_active == False:                         #Go see if any grills are doing work.
+                for grill in self.grills:                           #If nobody is working next MQTT refresh
+                    grill_id = grill["thingName"]                   #It'll call kill.
+                    state = self.get_state_for_device(grill_id)     #Maybe should be moved to ASYNC.
+                    if state == None:
+                        return
+                    if state["connected"]:
+                        if 4 <= state["system_status"] <= 8:
+                            self.grills_active = True
+    def mqtt_onpublish(self, client, userdata, mid):
+        _LOGGER.debug(f"OnPublish Callback. Client:{client} userdata:{userdata} mid:{mid}")
+    def mqtt_onunsubscribe(self, client, userdata, mid):
+        _LOGGER.debug(f"OnUnsubscribe Callback. Client:{client} userdata:{userdata} mid:{mid}")
+    def mqtt_ondisconnect(self, client, userdata, rc):
+        _LOGGER.debug(f"OnDisconnect Callback. Client:{client} userdata:{userdata} rc:{rc}")
+    def mqtt_onsocketopen(self, client, userdata, sock):
+        _LOGGER.debug(f"Sock.Open.Report...Client: {client} UserData: {userdata} Sock: {sock}")
+    def mqtt_onsocketclose(self, client, userdata, sock):
+        _LOGGER.debug(f"Sock.Clse.Report...Client: {client} UserData: {userdata} Sock: {sock}")
+    def mqtt_onsocketregisterwrite(self, client, userdata, sock):
+        _LOGGER.debug(f"Sock.Regi.Write....Client: {client} UserData: {userdata} Sock: {sock}")
+    def mqtt_onsocketunregisterwrite(self, client, userdata, sock):
+        _LOGGER.debug(f"Sock.UnRg.Write....Client: {client} UserData: {userdata} Sock: {sock}")
+#===========================/Paho MQTT Functions=======================================================
 
     def get_state_for_device(self, thingName):
         if thingName not in self.grill_status:
@@ -265,10 +312,10 @@ class traeger:
                 return accessory
         return None
 
-    async def start(self):
+    async def start(self, delay):
         await self.update_grills()
-        delay = 30
-        _LOGGER.info(f"Call_Later in: {delay} seconds")
+        self.grills_active = True
+        _LOGGER.info(f"Call_Later in: {delay} seconds.")
         self.task = self.loop.call_later(delay, self.syncmain)
 
     def syncmain(self):
@@ -283,7 +330,7 @@ class traeger:
             if self.mqtt_thread_running:
                 self.mqtt_client.disconnect()
                 self.mqtt_client = None
-            await self.get_mqtt_client(self.grill_connect, self.grill_message, self.mqtt_log, self.grill_subscribe)
+            await self.get_mqtt_client()
             self.mqtt_thread_refreshing = False
         _LOGGER.debug(f"Call_Later @: {self.mqtt_url_expires}")
         delay = self.mqtt_url_remaining()
@@ -296,16 +343,16 @@ class traeger:
             _LOGGER.info(f"Killing Task")
             _LOGGER.debug(f"Task Info: {self.task}")
             self.task.cancel()
-            _LOGGER.debug(f"TaskCancelled Status: {self.task.cancelled()}")
-            _LOGGER.debug(f"Task Info: {self.task}")
+            _LOGGER.debug(f"Task Info: {self.task} TaskCancelled Status: {self.task.cancelled()}")
             self.task = None
-            _LOGGER.debug(f"Task Info: {self.task}")
             self.mqtt_thread_running = False
             self.mqtt_client.disconnect()
-            self.mqtt_client = None
+            while self.mqtt_client_inloop:                  #Wait for disconnect to finish
+                await asyncio.sleep(0.25)
             self.mqtt_url_expires = time.time()
-            for grill in self.grills:
-                grill_id = grill["thingName"]
+            for grill in self.grills:                       #Mark the grill(s) disconnected so they report unavail.
+                grill_id = grill["thingName"]               #Also hit the callbacks to update HA
+                self.grill_status[grill_id]["status"]["connected"] = False
                 for callback in self.grill_callbacks[grill_id]:
                     callback()
         else:
