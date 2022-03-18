@@ -58,7 +58,7 @@ class TraegerConnectEntity(TraegerBaseSwitch):
     # Switch Methods
     async def async_turn_on(self, **kwargs):
         """Set new Switch Val."""
-        await self.client.start()
+        await self.client.start(1)
 
     async def async_turn_off(self, **kwargs):
         """Set new Switch Val."""
