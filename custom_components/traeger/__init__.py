@@ -54,7 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     client = traeger(username, password, hass, session)
 
-    await client.start()
+    await client.start(30)
     hass.data[DOMAIN][entry.entry_id] = client
 
     for platform in PLATFORMS:
