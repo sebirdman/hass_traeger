@@ -51,7 +51,7 @@ class traeger:
         self.request = request_library
         self.grill_callbacks = {}
         self.mqtt_client_inloop = False
-        self.autodisconnect = True
+        self.autodisconnect = False
 
     def token_remaining(self):
         return self.token_expires - time.time()
