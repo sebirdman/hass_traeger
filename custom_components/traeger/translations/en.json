@@ -1,8 +1,8 @@
 {
-    "config": {
-        "title": "Traeger",
+    "config": {        
         "step": {
             "user": {
+                "title": "Traeger",
                 "description": "If you need help with the configuration have a look here: https://github.com/sebirdman/hass_traeger/issues",
                 "data": {
                     "username": "Username",
