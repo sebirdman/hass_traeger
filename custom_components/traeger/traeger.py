@@ -171,8 +171,6 @@ class traeger:
         await self.refresh_mqtt_url()
         if self.mqtt_client != None:
             _LOGGER.debug(f"ReInit Client")
-            #self.mqtt_client.reinitialise()                            #Reint doesn't accept Transport.
-            #self.mqtt_client = mqtt.Client(transport="websockets")
         else:
             self.mqtt_client = mqtt.Client(transport="websockets")
             #self.mqtt_client.on_log = self.mqtt_onlog                  #logging passed via enable_logger this would be redundant.
@@ -189,11 +187,11 @@ class traeger:
                 self.mqtt_client.on_socket_close = self.mqtt_onsocketclose
                 self.mqtt_client.on_socket_register_write = self.mqtt_onsocketregisterwrite
                 self.mqtt_client.on_socket_unregister_write = self.mqtt_onsocketunregisterwrite
-                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-                context.check_hostname = False
-                context.verify_mode = ssl.CERT_NONE
-                self.mqtt_client.tls_set_context(context)
-                self.mqtt_client.reconnect_delay_set(min_delay=10, max_delay=160)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            self.mqtt_client.tls_set_context(context)
+            self.mqtt_client.reconnect_delay_set(min_delay=10, max_delay=160)
         mqtt_parts = urllib.parse.urlparse(self.mqtt_url)
         headers = {
             "Host": "{0:s}".format(mqtt_parts.netloc),
@@ -242,7 +240,7 @@ class traeger:
             if self.grills_active == False:                         #Go see if any grills are doing work.
                 for grill in self.grills:                           #If nobody is working next MQTT refresh
                     grill_id = grill["thingName"]                   #It'll call kill.
-                    state = self.get_state_for_device(grill_id)     #Maybe should be moved to ASYNC.
+                    state = self.get_state_for_device(grill_id)
                     if state == None:
                         return
                     if state["connected"]:
