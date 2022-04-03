@@ -23,7 +23,8 @@
                     "sensor": "Sensors enabled",
                     "climate": "Climate entity enabled",
                     "switch": "Switch entity enabled",
-                    "number": "Number entity enabled"
+                    "number": "Number entity enabled",
+                    "binary_sensor": "Binary Sensors enabled"
                 }
             }
         }
