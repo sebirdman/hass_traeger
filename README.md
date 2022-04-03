@@ -14,6 +14,7 @@ Platform | Description
 `climate` | Allows temperature control of the grill and probe
 `number` | Allows minutes input to the timer
 `switch` | Allow SuperSmoke, Keepwarm, and connectivity switch
+`binary sensor ` | Show values of boolean entities
 
 ![device][deviceimg]
 ![lovelace][lovelaceimg]
