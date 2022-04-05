@@ -24,12 +24,14 @@ from .const import (
     GRILL_MODE_IGNITING,
     GRILL_MODE_IDLE,
     GRILL_MODE_SLEEPING,
+    GRILL_MIN_TEMP_C,
+    GRILL_MIN_TEMP_F,
 )
 
 from .entity import TraegerBaseEntity
 
-class TraegerGrillMonitor():
 
+class TraegerGrillMonitor:
     def __init__(self, client, grill_id, async_add_devices):
         self.client = client
         self.grill_id = grill_id
@@ -51,9 +53,14 @@ class TraegerGrillMonitor():
             if accessory["type"] == "probe":
                 if accessory["uuid"] not in self.accessory_status:
                     self.async_add_devices(
-                        [AccessoryTraegerClimateEntity(self.client, self.grill_id, accessory["uuid"])]
+                        [
+                            AccessoryTraegerClimateEntity(
+                                self.client, self.grill_id, accessory["uuid"]
+                            )
+                        ]
                     )
                     self.accessory_status[accessory["uuid"]] = True
+
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup climate platform."""
@@ -66,7 +73,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
 
 
 class TraegerBaseClimate(ClimateEntity, TraegerBaseEntity):
-
     def __init__(self, client, grill_id, friendly_name):
         super().__init__(client, grill_id)
         self.friendly_name = friendly_name
@@ -96,6 +102,7 @@ class TraegerBaseClimate(ClimateEntity, TraegerBaseEntity):
     def supported_features(self):
         """Return the list of supported features for the grill"""
         return SUPPORT_TARGET_TEMPERATURE
+
 
 class TraegerClimateEntity(TraegerBaseClimate):
     """Climate entity for Traeger grills"""
@@ -141,11 +148,10 @@ class TraegerClimateEntity(TraegerBaseClimate):
 
     @property
     def min_temp(self):
-        # this was the min the traeger app would let me set
         if self.grill_units == TEMP_CELSIUS:
-            return 75
+            return GRILL_MIN_TEMP_C
         else:
-            return 165
+            return GRILL_MIN_TEMP_F
 
     @property
     def hvac_mode(self):
@@ -193,6 +199,7 @@ class TraegerClimateEntity(TraegerBaseClimate):
         """Start grill shutdown sequence"""
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             await self.client.shutdown_grill(self.grill_id)
+
 
 class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     """Climate entity for Traeger grills"""
@@ -298,4 +305,4 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         """Start grill shutdown sequence"""
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             hvac_mode = hvac_mode
-            #await self.client.shutdown_grill(self.grill_id)
+            # await self.client.shutdown_grill(self.grill_id)
