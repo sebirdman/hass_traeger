@@ -67,3 +67,29 @@ class TraegerBaseEntity(Entity):
             "attribution": ATTRIBUTION,
             "integration": DOMAIN,
         }
+
+class TraegerGrillMonitor:
+    def __init__(self, client, grill_id, async_add_devices, probe_entity = None):
+        self.client = client
+        self.grill_id = grill_id
+        self.async_add_devices = async_add_devices
+        self.probe_entity = probe_entity
+        self.accessory_status = {}
+
+        self.device_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_add_accessories()
+        self.client.set_callback_for_grill(self.grill_id, self.grill_monitor_internal)
+
+    def grill_monitor_internal(self):
+        self.device_state = self.client.get_state_for_device(self.grill_id)
+        self.grill_add_accessories()
+
+    def grill_add_accessories(self):
+        if self.device_state is None:
+            return
+        for accessory in self.device_state["acc"]:
+            if accessory["type"] == "probe":
+                if accessory["uuid"] not in self.accessory_status:
+                    if self.probe_entity:
+                        self.async_add_devices([self.probe_entity(self.client, self.grill_id, accessory["uuid"])])
+                        self.accessory_status[accessory["uuid"]] = True
