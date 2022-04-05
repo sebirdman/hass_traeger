@@ -35,6 +35,11 @@ GRILL_MODE_IGNITING = 4
 GRILL_MODE_IDLE = 3
 GRILL_MODE_SLEEPING = 2
 
+# Grill Temps
+# these are the min temps the traeger app would set
+GRILL_MIN_TEMP_C = 75
+GRILL_MIN_TEMP_F = 165
+
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
 {NAME}
