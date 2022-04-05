@@ -17,7 +17,7 @@ from .const import (
     GRILL_MIN_TEMP_F,
 )
 
-from .entity import TraegerBaseEntity
+from .entity import TraegerBaseEntity, TraegerGrillMonitor
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
@@ -32,6 +32,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
         async_add_devices([GrillTimer(client, grill["thingName"], "Cook Timer End", "cook_timer_end")])
         async_add_devices([GrillState(client, grill["thingName"], "Grill State", "grill_state")])
         async_add_devices([HeatingState(client, grill["thingName"], "Heating State", "heating_state")])
+        TraegerGrillMonitor(client, grill_id, async_add_devices, ProbeState)
 
 
 class TraegerBaseSensor(TraegerBaseEntity):
@@ -238,4 +239,82 @@ class HeatingState(TraegerBaseSensor):
         self.previous_target_temp = target_temp
         self.previous_state = state
 
+        return state
+
+
+class ProbeState(TraegerBaseSensor):
+
+    def __init__(self, client, grill_id, sensor_id):
+        super().__init__(client, grill_id, f"Probe State {sensor_id}", f"probe_state_{sensor_id}")
+        self.sensor_id = sensor_id
+        self.grill_accessory = self.client.get_details_for_accessory(self.grill_id, self.sensor_id)
+        self.previous_target_temp = None
+        self.probe_alarm = False
+        self.active_modes = [GRILL_MODE_PREHEATING, GRILL_MODE_IGNITING, GRILL_MODE_CUSTOM_COOK, GRILL_MODE_MANUAL_COOK]
+
+        # Tell the Traeger client to call grill_update() when it gets an update
+        self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
+
+    def grill_accessory_update(self):
+        """This gets called when the grill has an update. Update state variable"""
+        self.grill_refresh_state()
+        self.grill_accessory = self.client.get_details_for_accessory(
+            self.grill_id, self.sensor_id
+        )
+
+        if self.hass is None:
+            return
+
+        # Tell HA we have an update
+        self.schedule_update_ha_state()
+
+    # Generic Properties
+    @property
+    def available(self):
+        """Reports unavailable when the probe is not connected"""
+
+        if self.grill_accessory is None:
+            return False
+        else:
+            return self.grill_accessory["con"]
+
+    @property
+    def unique_id(self):
+        return f"{self.grill_id}_probe_state_{self.sensor_id}"
+
+    @property
+    def icon(self):
+        return "mdi:thermometer"
+
+    # Sensor Properties
+    @property
+    def state(self):
+        if self.grill_accessory is None:
+            self.probe_alarm = False
+            return "idle"
+
+        target_temp = self.grill_accessory["probe"]["set_temp"]
+        probe_temp = self.grill_accessory["probe"]["get_temp"]
+        target_changed = target_temp != self.previous_target_temp
+        grill_mode = self.grill_state["system_status"]
+
+        # Latch probe alarm, reset if target changed
+        if self.grill_accessory["probe"]["alarm_fired"]:
+            self.probe_alarm = True
+        elif target_changed and target_temp != 0:
+            self.probe_alarm = False
+
+        if self.probe_alarm or probe_temp >= target_temp:
+            state = "at_temp"
+        elif target_temp != 0 and self.grill_state in self.active_modes:
+            close_temp = 3 if self.grill_units == TEMP_CELSIUS else 5
+            if probe_temp + close_temp >= target_temp:
+                state = "close"
+            else:
+                state = "set"
+        else:
+            self.probe_alarm = False
+            state = "idle"
+
+        self.previous_target_temp = target_temp
         return state

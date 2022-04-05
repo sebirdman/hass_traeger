@@ -28,38 +28,7 @@ from .const import (
     GRILL_MIN_TEMP_F,
 )
 
-from .entity import TraegerBaseEntity
-
-
-class TraegerGrillMonitor:
-    def __init__(self, client, grill_id, async_add_devices):
-        self.client = client
-        self.grill_id = grill_id
-        self.async_add_devices = async_add_devices
-        self.accessory_status = {}
-
-        self.device_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_add_accessories()
-        self.client.set_callback_for_grill(self.grill_id, self.grill_monitor_internal)
-
-    def grill_monitor_internal(self):
-        self.device_state = self.client.get_state_for_device(self.grill_id)
-        self.grill_add_accessories()
-
-    def grill_add_accessories(self):
-        if self.device_state is None:
-            return
-        for accessory in self.device_state["acc"]:
-            if accessory["type"] == "probe":
-                if accessory["uuid"] not in self.accessory_status:
-                    self.async_add_devices(
-                        [
-                            AccessoryTraegerClimateEntity(
-                                self.client, self.grill_id, accessory["uuid"]
-                            )
-                        ]
-                    )
-                    self.accessory_status[accessory["uuid"]] = True
+from .entity import TraegerBaseEntity, TraegerGrillMonitor
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
@@ -69,7 +38,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     for grill in grills:
         grill_id = grill["thingName"]
         async_add_devices([TraegerClimateEntity(client, grill_id, "Climate")])
-        TraegerGrillMonitor(client, grill_id, async_add_devices)
+        TraegerGrillMonitor(client, grill_id, async_add_devices, AccessoryTraegerClimateEntity)
 
 
 class TraegerBaseClimate(ClimateEntity, TraegerBaseEntity):
