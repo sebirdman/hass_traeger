@@ -1,0 +1,31 @@
+
+set_custom_cook:
+  name: Set Cook Cycle
+  description: Set Custom Cook Cycle Steps
+  fields:
+    entity_id:
+      description: "Number Entity that serves Custom Cook Steps."
+      example: "'number.abcdefghi123_cook_cycle'"
+    steps:
+      description: "Steps to perform. `probe_alarm_fired` will progress the step =OR= (`cook_timer_complete` AND `use_timer`)"
+      example:
+        - time_set: 900             #Set timer
+          smoke: 1                  #S.Smoke if applicable
+          set_temp: 180             #Set grill temp
+          use_timer: 1              #If set we use the timer to progress if set to zero it won't progress on timer.
+        - probe_set_temp: 205       #Probe Temp
+          time_set: 64800           #Set timer in SECONDS but no `use_timer` so this is ref. only.
+          min_delta: 30             #Min Delta that the Grill temp will stay at in relation to probe.
+          max_grill_delta_temp: 225 #Required for min_delta
+          probe_act_temp_adv: 160   #adv the step on probe act temp
+        - min_delta: 40             #Min Delta that the Grill temp will stay at in relation to probe.
+          max_grill_delta_temp: 250 #Required for min_delta
+          probe_act_temp_adv: 170   #adv the step on probe act temp
+        - min_delta: 50             #Min Delta that the Grill temp will stay at in relation to probe.
+          max_grill_delta_temp: 275 #Required for min_delta
+          #Waiting for probe to hit setpoint
+        - set_temp: 205             #Go down to probe temp
+          time_set: 900             #Wait 15 minutes for somebody to tell me otherwise
+          use_timer: 1              #Adv on timer
+        - shutdown: 1               #Nobody aborted...shutdown.
+

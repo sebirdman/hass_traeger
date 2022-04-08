@@ -59,6 +59,11 @@ class traeger:
     async def do_cognito(self):
         t = datetime.datetime.utcnow()
         amzdate = t.strftime('%Y%m%dT%H%M%SZ')
+        _LOGGER.info(f"do_cognito t:{t}")
+        _LOGGER.info(f"do_cognito amzdate:{amzdate}")
+        #_LOGGER.info(f"do_cognito self.password:{self.password}")
+        _LOGGER.info(f"do_cognito self.username:{self.username}")
+        _LOGGER.info(f"do_cognito CLIENT_ID:{CLIENT_ID}")
         return await self.api_wrapper("post", "https://cognito-idp.us-west-2.amazonaws.com/",
                                       data={
                                               "ClientMetadata": {},
@@ -128,6 +133,10 @@ class traeger:
         if grill_id not in self.grill_callbacks:
             self.grill_callbacks[grill_id] = []
         self.grill_callbacks[grill_id].append(callback)
+
+    async def grill_callback(self,grill_id):
+        for callback in self.grill_callbacks[grill_id]:
+            callback()
 
     def mqtt_url_remaining(self):
         return self.mqtt_url_expires - time.time()
@@ -240,7 +249,7 @@ class traeger:
             if self.grills_active == False:                         #Go see if any grills are doing work.
                 for grill in self.grills:                           #If nobody is working next MQTT refresh
                     grill_id = grill["thingName"]                   #It'll call kill.
-                    state = self.get_state_for_device(grill_id)
+                    state = self.get_state_for_device(grill_id)     #Maybe should be moved to ASYNC.
                     if state == None:
                         return
                     if state["connected"]:
