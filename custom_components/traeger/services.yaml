@@ -7,25 +7,62 @@ set_custom_cook:
       description: "Number Entity that serves Custom Cook Steps."
       example: "'number.abcdefghi123_cook_cycle'"
     steps:
-      description: "Steps to perform. `probe_alarm_fired` will progress the step =OR= (`cook_timer_complete` AND `use_timer`)"
+      description: |
+        Steps to perform.
+        `probe_alarm_fired` will progress the step =OR= 
+        (`cook_timer_complete` AND `use_timer`) =OR= 
+        (`act_temp_adv` < grill temp) =OR= 
+        (`probe_act_temp_adv` < probe temp)
+                    
+        This Service only allows `Steps` Parameter. The other Parameters need to be nested within steps. See example (FILL EXAMPLE DATA), or /config/custom_components/traeger/services.yaml for more info.
+      required: true
       example:
-        - time_set: 900             #Set timer
-          smoke: 1                  #S.Smoke if applicable
+        - #1 Set temp and smoke, advance on probe fired, or act_temp_adv
           set_temp: 180             #Set grill temp
+          smoke: 1                  #S.Smoke if applicable          
+          act_temp_adv: 170         #Move to next step at this act temp
+        - #2 PRE-HEAT....Set timer and use timer to advance. #Probe fire would also advance it.
+          time_set: 900             #Set timer
           use_timer: 1              #If set we use the timer to progress if set to zero it won't progress on timer.
-        - probe_set_temp: 205       #Probe Temp
+        - #3 Set Probe Setpoint and Referance timer. Advance on probe_act_temp_adv (since it is lower than probe setpoint Step #2).
+          # `min_delta` AND `max_grill_delta_temp` can be used to increase grill temp within the step.
+          probe_set_temp: 205       #Probe Temp
           time_set: 64800           #Set timer in SECONDS but no `use_timer` so this is ref. only.
           min_delta: 30             #Min Delta that the Grill temp will stay at in relation to probe.
           max_grill_delta_temp: 225 #Required for min_delta
           probe_act_temp_adv: 160   #adv the step on probe act temp
-        - min_delta: 40             #Min Delta that the Grill temp will stay at in relation to probe.
+        - #4 Advance on probe_act_temp_adv (since it is lower than probe setpoint Step#2).
+          # `min_delta` AND `max_grill_delta_temp` can be used to increase grill temp within the step.
+          min_delta: 40             #Min Delta that the Grill temp will stay at in relation to probe.
           max_grill_delta_temp: 250 #Required for min_delta
           probe_act_temp_adv: 170   #adv the step on probe act temp
-        - min_delta: 50             #Min Delta that the Grill temp will stay at in relation to probe.
+        - #5 Advance on `probe_set_temp` (since it is lower than probe_act_temp_adv).
+          # `min_delta` AND `max_grill_delta_temp` can be used to increase grill temp within the step.
+          min_delta: 50             #Min Delta that the Grill temp will stay at in relation to probe.
           max_grill_delta_temp: 275 #Required for min_delta
-          #Waiting for probe to hit setpoint
-        - set_temp: 205             #Go down to probe temp
+          probe_act_temp_adv: 206   #Adv if probe registered over setpoint in step 2...safety.
+        - #6 Set temp to where the probe is @. Set timer. Advance on timer complete
+          set_temp: 205             #Go down to probe temp
           time_set: 900             #Wait 15 minutes for somebody to tell me otherwise
           use_timer: 1              #Adv on timer
-        - shutdown: 1               #Nobody aborted...shutdown.
+        - #7 Shutdown the grill if the timer is not cancelled.
+          shutdown: 1               #Nobody aborted...shutdown.
+    set_temp:
+      description: "Set Grill Temp. *Only up to your grill's MaxTemp."
+    smoke:
+      description: "Set Smoke Mode 1 or 0. *Only Avail if grill supports"
+    time_set:
+      description: "Set Timer."
+    use_timer:
+      description: "Use Timer to Advance State. *Only applies to current state."
+    min_delta:
+      description: "Min DELTA temp between Grill and Probe. *Requires `max_grill_delta_temp`."
+    max_grill_delta_temp:
+      description: "Max Temp it will increase to from probe `min_delta`. *Requires `min_delta`."
+    act_temp_adv:
+      description: "Grill Temp at which the State will advance."
+    probe_act_temp_adv:
+      description: "Probe Temp at which the State will advance."
+    shutdown:
+      description: "Call Grill Shutdown."
 
