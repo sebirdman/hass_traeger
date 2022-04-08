@@ -274,4 +274,4 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         """Start grill shutdown sequence"""
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             hvac_mode = hvac_mode
-            # await self.client.shutdown_grill(self.grill_id)
+            #await self.client.shutdown_grill(self.grill_id)
