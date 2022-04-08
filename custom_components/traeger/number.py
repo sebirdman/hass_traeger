@@ -152,9 +152,9 @@ class CookCycNumberEntity(NumberEntity, TraegerBaseEntity):
             next_step = self.cook_cycle[self.num_value]
         custom_attributes = {
             "cook_cycl": self.cook_cycle,
-            "prev_step": prev_step,
-            "curr_step": curr_step,
-            "next_step": next_step,
+            "prev_step": str(prev_step),
+            "curr_step": str(curr_step),
+            "next_step": str(next_step),
         }
         attributes = {}
         attributes.update(custom_attributes)
