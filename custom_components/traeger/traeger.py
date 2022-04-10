@@ -249,7 +249,7 @@ class traeger:
             if self.grills_active == False:                         #Go see if any grills are doing work.
                 for grill in self.grills:                           #If nobody is working next MQTT refresh
                     grill_id = grill["thingName"]                   #It'll call kill.
-                    state = self.get_state_for_device(grill_id)     #Maybe should be moved to ASYNC.
+                    state = self.get_state_for_device(grill_id)
                     if state == None:
                         return
                     if state["connected"]:
