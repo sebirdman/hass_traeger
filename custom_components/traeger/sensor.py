@@ -153,7 +153,7 @@ class GrillState(TraegerBaseSensor):
         elif state == GRILL_MODE_OFFLINE:  # Offline
             return "offline"
         else:
-            return "offline"
+            return "unknown"    # Likely a new state we don't know about
 
 
 class HeatingState(TraegerBaseSensor):
@@ -197,7 +197,7 @@ class HeatingState(TraegerBaseSensor):
             else:
                 state = "heating"
         elif grill_mode in self.cook_modes:
-            if self.previous_state == "heating":
+            if self.previous_state == "heating" or self.previous_state == "preheating":
                 if current_temp >= target_temp:
                     state = "at_temp"
                 else:
@@ -224,7 +224,7 @@ class HeatingState(TraegerBaseSensor):
                     state = "at_temp"
                 else:
                     state = "over_temp"
-            # Catch all if coming from idle or preheating
+            # Catch all if coming from idle/unavailable
             else:
                 target_changed = True
 
@@ -233,6 +233,8 @@ class HeatingState(TraegerBaseSensor):
                     state = "heating"
                 else:
                     state = "cooling"
+        elif grill_mode == GRILL_MODE_COOL_DOWN:
+            state = "cool_down"
         else:
             state = "idle"
 
@@ -297,6 +299,7 @@ class ProbeState(TraegerBaseSensor):
         probe_temp = self.grill_accessory["probe"]["get_temp"]
         target_changed = target_temp != self.previous_target_temp
         grill_mode = self.grill_state["system_status"]
+        fell_out_temp = 102 if self.grill_units == TEMP_CELSIUS else 215
 
         # Latch probe alarm, reset if target changed
         if self.grill_accessory["probe"]["alarm_fired"]:
@@ -304,15 +307,13 @@ class ProbeState(TraegerBaseSensor):
         elif target_changed and target_temp != 0:
             self.probe_alarm = False
 
-        if target_temp != 0 and grill_mode in self.active_modes:
-            fell_out_temp = 102 if self.grill_units == TEMP_CELSIUS else 215
+        if probe_temp >= fell_out_temp:
+            state = "fell_out"
+        elif self.probe_alarm:
+            state = "at_temp"
+        elif target_temp != 0 and grill_mode in self.active_modes:
             close_temp = 3 if self.grill_units == TEMP_CELSIUS else 5
-
-            if probe_temp >= fell_out_temp:
-                state = "fell_out"
-            elif self.probe_alarm or probe_temp >= target_temp:
-                state = "at_temp"
-            elif probe_temp + close_temp >= target_temp:
+            if probe_temp + close_temp >= target_temp:
                 state = "close"
             else:
                 state = "set"
