@@ -13,6 +13,7 @@ from .const import (
     GRILL_MODE_IGNITING,
     GRILL_MODE_IDLE,
     GRILL_MODE_SLEEPING,
+    GRILL_MODE_SHUTDOWN,
     GRILL_MIN_TEMP_C,
     GRILL_MIN_TEMP_F,
 )
@@ -136,22 +137,24 @@ class GrillState(TraegerBaseSensor):
 
         state = self.grill_state["system_status"]
 
-        if state == GRILL_MODE_COOL_DOWN:  # Cool Down
+        if state == GRILL_MODE_COOL_DOWN:
             return "cool_down"
-        elif state == GRILL_MODE_CUSTOM_COOK:  # Custom Cook
+        elif state == GRILL_MODE_CUSTOM_COOK:
             return "cook_custom"
-        elif state == GRILL_MODE_MANUAL_COOK:  # Manual Cook
+        elif state == GRILL_MODE_MANUAL_COOK:
             return "cook_manual"
-        elif state == GRILL_MODE_PREHEATING:  # Preheating
+        elif state == GRILL_MODE_PREHEATING:
             return "preheating"
-        elif state == GRILL_MODE_IGNITING:  # Igniting
+        elif state == GRILL_MODE_IGNITING:
             return "igniting"
-        elif state == GRILL_MODE_IDLE:  # Idle (Power switch on, screen on)
+        elif state == GRILL_MODE_IDLE:
             return "idle"
-        elif state == GRILL_MODE_SLEEPING:  # Sleeping (Power switch on, screen off)
+        elif state == GRILL_MODE_SLEEPING:
             return "sleeping"
-        elif state == GRILL_MODE_OFFLINE:  # Offline
+        elif state == GRILL_MODE_OFFLINE:
             return "offline"
+        elif state == GRILL_MODE_SHUTDOWN:
+            return "shutdown"
         else:
             return "unknown"    # Likely a new state we don't know about
 

@@ -26,14 +26,15 @@ CONF_PASSWORD = "password"
 DEFAULT_NAME = DOMAIN
 
 # Grill Modes
-GRILL_MODE_OFFLINE = 99
-GRILL_MODE_COOL_DOWN = 8
-GRILL_MODE_CUSTOM_COOK = 7
-GRILL_MODE_MANUAL_COOK = 6
-GRILL_MODE_PREHEATING = 5
-GRILL_MODE_IGNITING = 4
-GRILL_MODE_IDLE = 3
-GRILL_MODE_SLEEPING = 2
+GRILL_MODE_OFFLINE = 99     # Offline
+GRILL_MODE_SHUTDOWN = 9     # Cooled down, heading to sleep
+GRILL_MODE_COOL_DOWN = 8    # Cool down cycle
+GRILL_MODE_CUSTOM_COOK = 7  # Custom cook
+GRILL_MODE_MANUAL_COOK = 6  # Manual cook
+GRILL_MODE_PREHEATING = 5   # Preheating
+GRILL_MODE_IGNITING = 4     # Igniting
+GRILL_MODE_IDLE = 3         # Idle (Power switch on, screen on)
+GRILL_MODE_SLEEPING = 2     # Sleeping (Power switch on, screen off)
 
 # Grill Temps
 # these are the min temps the traeger app would set

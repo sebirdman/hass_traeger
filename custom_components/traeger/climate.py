@@ -24,6 +24,7 @@ from .const import (
     GRILL_MODE_IGNITING,
     GRILL_MODE_IDLE,
     GRILL_MODE_SLEEPING,
+    GRILL_MODE_SHUTDOWN,
     GRILL_MIN_TEMP_C,
     GRILL_MIN_TEMP_F,
 )
@@ -132,21 +133,23 @@ class TraegerClimateEntity(TraegerBaseClimate):
 
         state = self.grill_state["system_status"]
 
-        if state == GRILL_MODE_COOL_DOWN:  # Cool Down
+        if state == GRILL_MODE_COOL_DOWN:
             return HVAC_MODE_COOL
-        elif state == GRILL_MODE_CUSTOM_COOK:  # Custom Cook
+        elif state == GRILL_MODE_CUSTOM_COOK:
             return HVAC_MODE_HEAT
-        elif state == GRILL_MODE_MANUAL_COOK:  # Manual Cook
+        elif state == GRILL_MODE_MANUAL_COOK:
             return HVAC_MODE_HEAT
-        elif state == GRILL_MODE_PREHEATING:  # Preheating
+        elif state == GRILL_MODE_PREHEATING:
             return HVAC_MODE_HEAT
-        elif state == GRILL_MODE_IGNITING:  # Igniting
+        elif state == GRILL_MODE_IGNITING:
             return HVAC_MODE_HEAT
-        elif state == GRILL_MODE_IDLE:  # Idle (Power switch on, screen on)
+        elif state == GRILL_MODE_IDLE:
             return HVAC_MODE_OFF
-        elif state == GRILL_MODE_SLEEPING:  # Sleeping (Power switch on, screen off)
+        elif state == GRILL_MODE_SLEEPING:
             return HVAC_MODE_OFF
-        elif state == GRILL_MODE_OFFLINE:  # Offline
+        elif state == GRILL_MODE_OFFLINE:
+            return HVAC_MODE_OFF
+        elif state == GRILL_MODE_SHUTDOWN:
             return HVAC_MODE_OFF
         else:
             return HVAC_MODE_OFF
