@@ -71,6 +71,13 @@ State | Description
 `at_temp` | Probe alarm has fired
 `fell_out` | Probe probably fell out of the meat (Probe temperature is greater that 215°F)
 
+### Cook Cycle Number Entity
+This number input provides the step increment the grill is currently at. Cook cycles are defined to this number entity via `set_custom_cook` service.
+Value | Description
+-- | --
+`0` | Idle. HA based cook cycle is not active.
+`1+` | Cook Cycle is currently at **val** step as shown by ATTR `curr_step`
+
 ## Installation (HACS)
 
 1. Add this repository to HACS
