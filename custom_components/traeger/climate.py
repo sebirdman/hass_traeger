@@ -4,9 +4,11 @@ from homeassistant.components.climate import (
 )
 from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE,
+    SUPPORT_PRESET_MODE,
     HVAC_MODE_HEAT,
     HVAC_MODE_COOL,
     HVAC_MODE_OFF,
+    PRESET_NONE,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -182,6 +184,81 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         self.grill_accessory = self.client.get_details_for_accessory(
             self.grill_id, self.sensor_id
         )
+        self.current_preset_mode = PRESET_NONE
+        self.available_preset_modes = {
+                "Chicken": {
+                    TEMP_FAHRENHEIT: 165,
+                    TEMP_CELSIUS: 74,
+                    },
+                "Turkey": {
+                    TEMP_FAHRENHEIT: 165,
+                    TEMP_CELSIUS: 74,
+                    },
+                "Beef (Rare)": {
+                    TEMP_FAHRENHEIT: 125,
+                    TEMP_CELSIUS: 52,
+                    },
+                "Beef (Medium Rare)": {
+                    TEMP_FAHRENHEIT: 135,
+                    TEMP_CELSIUS: 57,
+                    },
+                "Beef (Medium)": {
+                    TEMP_FAHRENHEIT: 140,
+                    TEMP_CELSIUS: 60,
+                    },
+                "Beef (Medium Well)": {
+                    TEMP_FAHRENHEIT: 145,
+                    TEMP_CELSIUS: 63,
+                    },
+                "Beef (Well Done)": {
+                    TEMP_FAHRENHEIT: 155,
+                    TEMP_CELSIUS: 68,
+                    },
+                "Beef (Ground)": {
+                    TEMP_FAHRENHEIT: 160,
+                    TEMP_CELSIUS: 71,
+                    },
+                "Lamb (Rare)": {
+                    TEMP_FAHRENHEIT: 125,
+                    TEMP_CELSIUS: 52,
+                    },
+                "Lamb (Medium Rare)": {
+                    TEMP_FAHRENHEIT: 135,
+                    TEMP_CELSIUS: 57,
+                    },
+                "Lamb (Medium)": {
+                    TEMP_FAHRENHEIT: 140,
+                    TEMP_CELSIUS: 60,
+                    },
+                "Lamb (Medium Well)": {
+                    TEMP_FAHRENHEIT: 145,
+                    TEMP_CELSIUS: 63,
+                    },
+                "Lamb (Well Done)": {
+                    TEMP_FAHRENHEIT: 155,
+                    TEMP_CELSIUS: 68,
+                    },
+                "Lamb (Ground)": {
+                    TEMP_FAHRENHEIT: 160,
+                    TEMP_CELSIUS: 71,
+                    },
+                "Pork (Medium Rare)": {
+                    TEMP_FAHRENHEIT: 135,
+                    TEMP_CELSIUS: 57,
+                    },
+                "Pork (Medium)": {
+                    TEMP_FAHRENHEIT: 140,
+                    TEMP_CELSIUS: 60,
+                    },
+                "Pork (Well Done)": {
+                    TEMP_FAHRENHEIT: 155,
+                    TEMP_CELSIUS: 68,
+                    },
+                "Fish": {
+                    TEMP_FAHRENHEIT: 145,
+                    TEMP_CELSIUS: 63,
+                    },
+                }
 
         # Tell the Traeger client to call grill_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
@@ -267,9 +344,29 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         """
         return (HVAC_MODE_HEAT, HVAC_MODE_OFF)
 
+    @property
+    def preset_mode(self):
+        if (self.grill_state is None
+                or self.grill_state["probe_con"] == 0
+                or self.target_temperature == 0):
+            # Reset current preset mode
+            self.current_preset_mode = PRESET_NONE
+
+        return self.current_preset_mode
+
+    @property
+    def preset_modes(self):
+        return list(self.available_preset_modes.keys())
+
+    @property
+    def supported_features(self):
+        """Return the list of supported features for the grill"""
+        return SUPPORT_TARGET_TEMPERATURE | SUPPORT_PRESET_MODE
+
     # Climate Methods
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
+        self.current_preset_mode = PRESET_NONE
         temperature = kwargs.get(ATTR_TEMPERATURE)
         await self.client.set_probe_temperature(self.grill_id, round(temperature))
 
@@ -278,3 +375,9 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         if hvac_mode == HVAC_MODE_OFF or hvac_mode == HVAC_MODE_COOL:
             hvac_mode = hvac_mode
             #await self.client.shutdown_grill(self.grill_id)
+
+    async def async_set_preset_mode(self, preset_mode):
+        """Set new target preset mode"""
+        self.current_preset_mode = preset_mode
+        temperature = self.available_preset_modes[preset_mode][self.grill_units]
+        await self.client.set_probe_temperature(self.grill_id, round(temperature))
