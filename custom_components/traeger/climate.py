@@ -187,7 +187,7 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         )
         self.current_preset_mode = PRESET_NONE
 
-        # Tell the Traeger client to call grill_update() when it gets an update
+        # Tell the Traeger client to call grill_accessory_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
 
     def grill_accessory_update(self):
@@ -207,10 +207,10 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     @property
     def available(self):
         """Reports unavailable when the grill is powered off"""
-        if self.grill_state is None:
+        if self.grill_accessory is None:
             return False
         else:
-            return True if self.grill_state["probe_con"] == 1 else False
+            return self.grill_accessory["con"]
 
     @property
     def unique_id(self):
@@ -245,9 +245,9 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     def min_temp(self):
         # this was the min the traeger would let me set
         if self.grill_units == TEMP_CELSIUS:
-            return 45
+            return 27
         else:
-            return 115
+            return 80
 
     @property
     def hvac_mode(self):
@@ -257,7 +257,7 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
         if self.grill_state is None:
             return HVAC_MODE_OFF
 
-        state = self.grill_state["probe_con"]
+        state = self.grill_accessory["con"]
 
         if state == 1:  # Probe Connected
             return HVAC_MODE_HEAT

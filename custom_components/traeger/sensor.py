@@ -252,12 +252,14 @@ class ProbeState(TraegerBaseSensor):
     def __init__(self, client, grill_id, sensor_id):
         super().__init__(client, grill_id, f"Probe State {sensor_id}", f"probe_state_{sensor_id}")
         self.sensor_id = sensor_id
-        self.grill_accessory = self.client.get_details_for_accessory(self.grill_id, self.sensor_id)
+        self.grill_accessory = self.client.get_details_for_accessory(
+            self.grill_id, self.sensor_id
+        )
         self.previous_target_temp = None
         self.probe_alarm = False
         self.active_modes = [GRILL_MODE_PREHEATING, GRILL_MODE_IGNITING, GRILL_MODE_CUSTOM_COOK, GRILL_MODE_MANUAL_COOK]
 
-        # Tell the Traeger client to call grill_update() when it gets an update
+        # Tell the Traeger client to call grill_accessory_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
 
     def grill_accessory_update(self):
