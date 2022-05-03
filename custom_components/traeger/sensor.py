@@ -281,9 +281,15 @@ class ProbeState(TraegerBaseSensor):
         """Reports unavailable when the probe is not connected"""
 
         if self.grill_accessory is None:
+            # Reset probe alarm if accessory becomes unavailable
+            self.probe_alarm = False
             return False
         else:
-            return self.grill_accessory["con"]
+            connected = self.grill_accessory["con"]
+            # Reset probe alarm if accessory is not connected
+            if not connected:
+                self.probe_alarm = False
+            return connected
 
     @property
     def unique_id(self):
@@ -297,7 +303,6 @@ class ProbeState(TraegerBaseSensor):
     @property
     def state(self):
         if self.grill_accessory is None:
-            self.probe_alarm = False
             return "idle"
 
         target_temp = self.grill_accessory["probe"]["set_temp"]
@@ -306,10 +311,11 @@ class ProbeState(TraegerBaseSensor):
         grill_mode = self.grill_state["system_status"]
         fell_out_temp = 102 if self.grill_units == TEMP_CELSIUS else 215
 
-        # Latch probe alarm, reset if target changed
+        # Latch probe alarm, reset if target changed or grill leaves active modes
         if self.grill_accessory["probe"]["alarm_fired"]:
             self.probe_alarm = True
-        elif target_changed and target_temp != 0:
+        elif ((target_changed and target_temp != 0)
+                or (grill_mode not in self.active_modes)):
             self.probe_alarm = False
 
         if probe_temp >= fell_out_temp:
