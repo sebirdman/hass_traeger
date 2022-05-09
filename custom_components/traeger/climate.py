@@ -207,7 +207,9 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     @property
     def available(self):
         """Reports unavailable when the grill is powered off"""
-        if self.grill_accessory is None:
+        if (self.grill_state is None
+                or self.grill_state["connected"] == False
+                or self.grill_accessory is None):
             return False
         else:
             return self.grill_accessory["con"]
