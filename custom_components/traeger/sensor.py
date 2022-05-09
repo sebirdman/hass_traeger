@@ -280,7 +280,9 @@ class ProbeState(TraegerBaseSensor):
     def available(self):
         """Reports unavailable when the probe is not connected"""
 
-        if self.grill_accessory is None:
+        if (self.grill_state is None
+                or self.grill_state["connected"] == False
+                or self.grill_accessory is None):
             # Reset probe alarm if accessory becomes unavailable
             self.probe_alarm = False
             return False
