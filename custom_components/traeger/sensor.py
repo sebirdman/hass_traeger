@@ -252,12 +252,14 @@ class ProbeState(TraegerBaseSensor):
     def __init__(self, client, grill_id, sensor_id):
         super().__init__(client, grill_id, f"Probe State {sensor_id}", f"probe_state_{sensor_id}")
         self.sensor_id = sensor_id
-        self.grill_accessory = self.client.get_details_for_accessory(self.grill_id, self.sensor_id)
+        self.grill_accessory = self.client.get_details_for_accessory(
+            self.grill_id, self.sensor_id
+        )
         self.previous_target_temp = None
         self.probe_alarm = False
         self.active_modes = [GRILL_MODE_PREHEATING, GRILL_MODE_IGNITING, GRILL_MODE_CUSTOM_COOK, GRILL_MODE_MANUAL_COOK]
 
-        # Tell the Traeger client to call grill_update() when it gets an update
+        # Tell the Traeger client to call grill_accessory_update() when it gets an update
         self.client.set_callback_for_grill(self.grill_id, self.grill_accessory_update)
 
     def grill_accessory_update(self):
@@ -278,10 +280,18 @@ class ProbeState(TraegerBaseSensor):
     def available(self):
         """Reports unavailable when the probe is not connected"""
 
-        if self.grill_accessory is None:
+        if (self.grill_state is None
+                or self.grill_state["connected"] == False
+                or self.grill_accessory is None):
+            # Reset probe alarm if accessory becomes unavailable
+            self.probe_alarm = False
             return False
         else:
-            return self.grill_accessory["con"]
+            connected = self.grill_accessory["con"]
+            # Reset probe alarm if accessory is not connected
+            if not connected:
+                self.probe_alarm = False
+            return connected
 
     @property
     def unique_id(self):
@@ -295,7 +305,6 @@ class ProbeState(TraegerBaseSensor):
     @property
     def state(self):
         if self.grill_accessory is None:
-            self.probe_alarm = False
             return "idle"
 
         target_temp = self.grill_accessory["probe"]["set_temp"]
@@ -304,10 +313,11 @@ class ProbeState(TraegerBaseSensor):
         grill_mode = self.grill_state["system_status"]
         fell_out_temp = 102 if self.grill_units == TEMP_CELSIUS else 215
 
-        # Latch probe alarm, reset if target changed
+        # Latch probe alarm, reset if target changed or grill leaves active modes
         if self.grill_accessory["probe"]["alarm_fired"]:
             self.probe_alarm = True
-        elif target_changed and target_temp != 0:
+        elif ((target_changed and target_temp != 0)
+                or (grill_mode not in self.active_modes)):
             self.probe_alarm = False
 
         if probe_temp >= fell_out_temp:
