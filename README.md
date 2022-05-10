@@ -64,7 +64,7 @@ State | Description
 This sensor provides triggers for useful probe events such as being close to the target temperature or reaching the target temperature.
 State | Description
 -- | --
-`idle` | Probe target temperature is **not** set
+`idle` | Probe target temperature is **not** set (or grill is not in igniting, preheating or cooking modes)
 `set` | Probe target temperature **is** set
 `close` | Probe temperature is within 5°F of target temperature
 `at_temp` | Probe alarm has fired
