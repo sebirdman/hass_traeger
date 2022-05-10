@@ -41,6 +41,10 @@ GRILL_MODE_SLEEPING = 2     # Sleeping (Power switch on, screen off)
 GRILL_MIN_TEMP_C = 75
 GRILL_MIN_TEMP_F = 165
 
+# Super Smoke is available until this temperature
+SUPER_SMOKE_MAX_TEMP_C = 107
+SUPER_SMOKE_MAX_TEMP_F = 225
+
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
 {NAME}
