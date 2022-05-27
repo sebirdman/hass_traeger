@@ -1,3 +1,8 @@
+from homeassistant.const import (
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+)
+
 """Constants for traeger."""
 # Base component constants
 NAME = "Traeger"
@@ -44,6 +49,82 @@ GRILL_MIN_TEMP_F = 165
 # Super Smoke is available until this temperature
 SUPER_SMOKE_MAX_TEMP_C = 107
 SUPER_SMOKE_MAX_TEMP_F = 225
+
+# Probe Preset Modes
+PROBE_PRESET_MODES = {
+        "Chicken": {
+            TEMP_FAHRENHEIT: 165,
+            TEMP_CELSIUS: 74,
+            },
+        "Turkey": {
+            TEMP_FAHRENHEIT: 165,
+            TEMP_CELSIUS: 74,
+            },
+        "Beef (Rare)": {
+            TEMP_FAHRENHEIT: 125,
+            TEMP_CELSIUS: 52,
+            },
+        "Beef (Medium Rare)": {
+            TEMP_FAHRENHEIT: 135,
+            TEMP_CELSIUS: 57,
+            },
+        "Beef (Medium)": {
+            TEMP_FAHRENHEIT: 140,
+            TEMP_CELSIUS: 60,
+            },
+        "Beef (Medium Well)": {
+            TEMP_FAHRENHEIT: 145,
+            TEMP_CELSIUS: 63,
+            },
+        "Beef (Well Done)": {
+            TEMP_FAHRENHEIT: 155,
+            TEMP_CELSIUS: 68,
+            },
+        "Beef (Ground)": {
+            TEMP_FAHRENHEIT: 160,
+            TEMP_CELSIUS: 71,
+            },
+        "Lamb (Rare)": {
+            TEMP_FAHRENHEIT: 125,
+            TEMP_CELSIUS: 52,
+            },
+        "Lamb (Medium Rare)": {
+            TEMP_FAHRENHEIT: 135,
+            TEMP_CELSIUS: 57,
+            },
+        "Lamb (Medium)": {
+            TEMP_FAHRENHEIT: 140,
+            TEMP_CELSIUS: 60,
+            },
+        "Lamb (Medium Well)": {
+            TEMP_FAHRENHEIT: 145,
+            TEMP_CELSIUS: 63,
+            },
+        "Lamb (Well Done)": {
+            TEMP_FAHRENHEIT: 155,
+            TEMP_CELSIUS: 68,
+            },
+        "Lamb (Ground)": {
+            TEMP_FAHRENHEIT: 160,
+            TEMP_CELSIUS: 71,
+            },
+        "Pork (Medium Rare)": {
+            TEMP_FAHRENHEIT: 135,
+            TEMP_CELSIUS: 57,
+            },
+        "Pork (Medium)": {
+            TEMP_FAHRENHEIT: 140,
+            TEMP_CELSIUS: 60,
+            },
+        "Pork (Well Done)": {
+            TEMP_FAHRENHEIT: 155,
+            TEMP_CELSIUS: 68,
+            },
+        "Fish": {
+            TEMP_FAHRENHEIT: 145,
+            TEMP_CELSIUS: 63,
+            },
+        }
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
