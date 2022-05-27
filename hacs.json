@@ -1,10 +1,6 @@
 {
     "name": "Traeger",
     "hacs": "1.6.0",
-    "domains": [
-        "climate",
-        "sensor"
-    ],
     "iot_class": "Cloud Push",
     "render_readme": true,
     "homeassistant": "0.118.0"
