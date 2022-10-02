@@ -42,7 +42,7 @@ class TraegerNumberEntity(NumberEntity, TraegerBaseEntity):
 
     # Timer Properties
     @property
-    def value(self):
+    def native_value(self):
         if self.grill_state is None:
             return 0
         end_time = self.grill_state[f"{self.devname}_end"]
@@ -51,18 +51,18 @@ class TraegerNumberEntity(NumberEntity, TraegerBaseEntity):
         return tot_time
 
     @property
-    def min_value(self):
+    def native_min_value(self):
         return 1
 
     @property
-    def max_value(self):
+    def native_max_value(self):
         return 1440
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         return "min"
 
     # Timer Methods
-    async def async_set_value(self, value : float):
+    async def async_set_native_value(self, value : float):
         """Set new Timer Val."""
         await self.client.set_timer_sec(self.grill_id, (round(value)*60))
