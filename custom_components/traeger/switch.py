@@ -1,10 +1,13 @@
 """Switch platform for Traeger."""
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 
 from .const import (
     DOMAIN,
     GRILL_MODE_CUSTOM_COOK,
     GRILL_MODE_IGNITING,
+    SUPER_SMOKE_MAX_TEMP_C,
+    SUPER_SMOKE_MAX_TEMP_F,
 )
 
 from .entity import TraegerBaseEntity
@@ -115,5 +118,9 @@ class TraegerSuperSmokeEntity(TraegerSwitchEntity):
             return False
         else:
             if GRILL_MODE_IGNITING <= self.grill_state['system_status'] <= GRILL_MODE_CUSTOM_COOK:
-                return True if self.grill_features["super_smoke_enabled"] == 1 else False
+                super_smoke_supported = self.grill_features["super_smoke_enabled"] == 1
+                super_smoke_max_temp = SUPER_SMOKE_MAX_TEMP_C if self.grill_units == TEMP_CELSIUS else SUPER_SMOKE_MAX_TEMP_F
+                super_smoke_within_temp = self.grill_state["set"] <= super_smoke_max_temp
+                
+                return super_smoke_supported and super_smoke_within_temp
         return False
