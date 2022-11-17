@@ -12,8 +12,9 @@ Platform | Description
 -- | --
 `sensor` | Shows various temperature readings from the grill or accessories
 `climate` | Allows temperature control of the grill and probe
-`number` | Allows minutes input to the timer
+`number` | Allows minutes input to the timer and cook cycles.
 `switch` | Allow SuperSmoke, Keepwarm, and connectivity switch
+`binary sensor ` | Show values of boolean entities
 
 ![device][deviceimg]
 ![lovelace][lovelaceimg]
@@ -69,6 +70,13 @@ State | Description
 `close` | Probe temperature is within 5°F of target temperature
 `at_temp` | Probe alarm has fired
 `fell_out` | Probe probably fell out of the meat (Probe temperature is greater that 215°F)
+
+### Cook Cycle Number Entity
+This number input provides the step increment the grill is currently at. Cook cycles are defined to this number entity via `set_custom_cook` service.
+Value | Description
+-- | --
+`0` | Idle. HA based cook cycle is not active.
+`1+` | Cook Cycle is currently at **val** step as shown by ATTR `curr_step`
 
 ## Installation (HACS)
 

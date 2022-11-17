@@ -20,7 +20,8 @@ CLIMATE = "climate"
 SENSOR = "sensor"
 SWITCH = "switch"
 NUMBER = "number"
-PLATFORMS = [CLIMATE, SENSOR, SWITCH, NUMBER]
+BINARY_SENSOR = "binary_sensor"
+PLATFORMS = [CLIMATE, SENSOR, SWITCH, NUMBER, BINARY_SENSOR]
 
 # Configuration and options
 CONF_ENABLED = "enabled"
