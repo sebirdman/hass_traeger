@@ -227,13 +227,15 @@ class AccessoryTraegerClimateEntity(TraegerBaseClimate):
     def current_temperature(self):
         if self.grill_accessory is None:
             return 0
-        return self.grill_accessory["probe"]["get_temp"]
+        acc_type = self.grill_accessory["type"]
+        return self.grill_accessory[acc_type]["get_temp"]
 
     @property
     def target_temperature(self):
         if self.grill_accessory is None:
             return 0
-        return self.grill_accessory["probe"]["set_temp"]
+        acc_type = self.grill_accessory["type"]
+        return self.grill_accessory[acc_type]["set_temp"]
 
     @property
     def max_temp(self):
