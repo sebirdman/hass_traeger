@@ -7,5 +7,5 @@
     ],
     "iot_class": "Cloud Push",
     "render_readme": true,
-    "homeassistant": "0.118.0"
+    "homeassistant": "2022.11.0"
 }

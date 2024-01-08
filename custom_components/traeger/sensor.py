@@ -1,6 +1,6 @@
 """Sensor platform for Traeger."""
 from homeassistant.helpers.entity import Entity
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 
 from .const import (
     DEFAULT_NAME,
@@ -188,9 +188,9 @@ class HeatingState(TraegerBaseSensor):
         current_temp = self.grill_state["grill"]
         target_changed = True if target_temp != self.previous_target_temp else False
         min_cook_temp = (
-            GRILL_MIN_TEMP_C if self.grill_units == TEMP_CELSIUS else GRILL_MIN_TEMP_F
+            GRILL_MIN_TEMP_C if self.grill_units == UnitOfTemperature.CELSIUS else GRILL_MIN_TEMP_F
         )
-        temp_swing = 11 if self.grill_units == TEMP_CELSIUS else 20
+        temp_swing = 11 if self.grill_units == UnitOfTemperature.CELSIUS else 20
         low_temp = target_temp - temp_swing
         high_temp = target_temp + temp_swing
 
@@ -311,7 +311,7 @@ class ProbeState(TraegerBaseSensor):
         probe_temp = self.grill_accessory["probe"]["get_temp"]
         target_changed = target_temp != self.previous_target_temp
         grill_mode = self.grill_state["system_status"]
-        fell_out_temp = 102 if self.grill_units == TEMP_CELSIUS else 215
+        fell_out_temp = 102 if self.grill_units == UnitOfTemperature.CELSIUS else 215
 
         # Latch probe alarm, reset if target changed or grill leaves active modes
         if self.grill_accessory["probe"]["alarm_fired"]:
@@ -325,7 +325,7 @@ class ProbeState(TraegerBaseSensor):
         elif self.probe_alarm:
             state = "at_temp"
         elif target_temp != 0 and grill_mode in self.active_modes:
-            close_temp = 3 if self.grill_units == TEMP_CELSIUS else 5
+            close_temp = 3 if self.grill_units == UnitOfTemperature.CELSIUS else 5
             if probe_temp + close_temp >= target_temp:
                 state = "close"
             else:
